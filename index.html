@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#F4F6F9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>FinanzasPWA — Gestión Multidivisa Offline-First</title>
+
+    <!-- Google Fonts: Poppins (Cifras y Títulos) & Inter (UI y Etiquetas) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Dexie.js (Wrapper de IndexedDB para arquitectura Offline-First) -->
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Poppins', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        appbg: '#F4F6F9',
+                        navy: {
+                            800: '#1E293B',
+                            900: '#0F172A'
+                        },
+                        brand: {
+                            purple: '#6D28D9',
+                            blue: '#1D4ED8',
+                            teal: '#0D9488',
+                            amber: '#F59E0B',
+                            orange: '#EA580C'
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03)',
+                        'card': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
+                        'glow-purple': '0 14px 28px -6px rgba(109, 40, 217, 0.38)',
+                        'glow-blue': '0 10px 24px -4px rgba(29, 78, 216, 0.3)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos Base y Paleta Visual Solicitada */
+        body {
+            background-color: #F4F6F9;
+            color: #0F172A;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        .font-metric {
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        /* Degradados de acento especificados en los requerimientos */
+        .bg-purple-gradient {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #9333EA 100%);
+        }
+
+        .bg-blue-gradient {
+            background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%);
+        }
+
+        .bg-teal-gradient {
+            background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
+        }
+
+        .bg-amber-gradient {
+            background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+        }
+
+        /* Scrollbars ocultos para contenedores táctiles */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Animaciones suaves para modales y tarjetas */
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Bloques de código de la documentación técnica */
+        pre.code-block {
+            background: #0F172A;
+            color: #E2E8F0;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ===================================================================== -->
+    <!-- BARRA SUPERIOR DE MODO: SIMULADOR MÓVIL PWA vs. ARQUITECTURA & CÓDIGO -->
+    <!-- ===================================================================== -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-purple-gradient flex items-center justify-center text-white shadow-glow-purple">
+                    <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-display font-bold text-navy-900 text-sm sm:text-base tracking-tight">FinanzasPWA</span>
+                        <span id="network-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 text-brand-teal border border-teal-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-brand-teal animate-pulse"></span>
+                            Online
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Offline-First • IndexedDB (Dexie) • Sync Bidireccional Google Sheets</p>
+                </div>
+            </div>
+
+            <!-- Selector de Vista Principal: App Móvil vs Documentación de Ingeniería -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/70">
+                <button onclick="switchWorkspace('pwa')" id="btn-ws-pwa" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5 text-brand-purple"></i>
+                    <span>App Móvil (PWA)</span>
+                </button>
+                <button onclick="switchWorkspace('docs')" id="btn-ws-docs" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900">
+                    <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-brand-blue"></i>
+                    <span>Arquitectura, GAS & Despliegue</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- WORKSPACE 1: APLICACIÓN MÓVIL PWA (MOBILE-FIRST STRICT VERTICAL VIEW) -->
+    <!-- ===================================================================== -->
+    <main id="workspace-pwa" class="flex-1 flex justify-center items-start py-0 sm:py-6 px-0 sm:px-4">
+        <div class="w-full max-w-[440px] bg-appbg sm:rounded-[36px] sm:shadow-2xl sm:border-[6px] sm:border-white min-h-[calc(100vh-56px)] sm:min-h-[820px] flex flex-col justify-between relative overflow-hidden">
+
+            <!-- CABECERA INTERNA DE LA APP MÓVIL -->
+            <div class="px-5 pt-5 pb-3 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-normal text-slate-500">Patrimonio & Control</p>
+                    <h1 class="font-display font-bold text-lg text-navy-900" id="mobile-header-title">Resumen Financiero</h1>
+                </div>
+
+                <!-- Selector Global de Moneda de Visualización + Estado Sync -->
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <label for="display-currency-selector" class="sr-only">Moneda de visualización</label>
+                        <select id="display-currency-selector" onchange="handleDisplayCurrencyChange(this.value)"
+                            class="appearance-none bg-white border border-slate-200/90 text-navy-900 font-display font-semibold text-xs rounded-xl pl-3 pr-7 py-2 shadow-card focus:outline-none focus:ring-2 focus:ring-brand-purple cursor-pointer">
+                            <option value="ORIGINAL">Ver Original</option>
+                            <option value="USD">Equiv. USD ($)</option>
+                            <option value="USDT">Equiv. USDT (₮)</option>
+                            <option value="BS">Equiv. BS (Bs.)</option>
+                            <option value="EUR">Equiv. EUR (€)</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+
+                    <button onclick="openModal('modal-sync')" title="Sincronizar con Google Sheets"
+                        class="relative w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-card flex items-center justify-center text-navy-800 hover:bg-slate-50 active:scale-95 transition">
+                        <i data-lucide="refresh-cw" id="sync-icon" class="w-4 h-4 text-brand-blue"></i>
+                        <span id="pending-sync-dot" class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-amber text-white text-[9px] font-bold flex items-center justify-center shadow">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PÍLDORA RÁPIDA DE TASAS DE CAMBIO (PIVOTE USD) -->
+            <div class="px-5 mb-3">
+                <div onclick="openModal('modal-rates')" class="bg-white rounded-2xl px-3.5 py-2.5 shadow-card border border-slate-100 flex items-center justify-between cursor-pointer hover:border-purple-200 transition">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-amber-50 text-brand-amber flex items-center justify-center">
+                            <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                        </span>
+                        <div class="text-xs">
+                            <span class="text-slate-400 font-normal">Pivote 1 USD = </span>
+                            <span id="pill-rates-summary" class="font-display font-semibold text-navy-900">45.50 BS • 1.00 USDT</span>
+                        </div>
+                    </div>
+                    <span class="text-[11px] font-medium text-brand-purple bg-purple-50 px-2.5 py-1 rounded-lg">Ajustar tasa</span>
+                </div>
+            </div>
+
+            <!-- CONTENEDOR DE VISTAS DINÁMICAS DE LA PWA -->
+            <div class="flex-1 px-5 pb-24 overflow-y-auto no-scrollbar space-y-5" id="pwa-scroll-container">
+
+                <!-- ==================== VISTA 1: DASHBOARD ==================== -->
+                <section id="view-dashboard" class="space-y-5 animate-slide-up">
+
+                    <!-- Tarjeta Hero: Patrimonio Neto Consolidado -->
+                    <div class="bg-purple-gradient rounded-3xl p-6 text-white shadow-glow-purple relative overflow-hidden">
+                        <div class="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
+                        <div class="absolute -left-6 -bottom-10 w-28 h-28 rounded-full bg-indigo-900/20 blur-lg pointer-events-none"></div>
+
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-normal text-purple-100 uppercase tracking-wider">Patrimonio Consolidado</span>
+                            <span id="hero-currency-badge" class="text-[11px] font-semibold bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full">Base USD</span>
+                        </div>
+
+                        <div class="font-metric font-bold text-3xl sm:text-4xl tracking-tight my-1" id="hero-net-worth">
+                            $0.00
+                        </div>
+                        <p class="text-xs text-purple-100/90 font-light" id="hero-sub-equivalent">
+                            Equivalente pivote: $0.00 USD
+                        </p>
+
+                        <!-- Métricas del Mes (Ingresos / Gastos / Deudas) -->
+                        <div class="grid grid-cols-3 gap-2.5 mt-5 pt-4 border-t border-white/15">
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5">
+                                <div class="flex items-center gap-1 text-[11px] text-teal-200 mb-0.5">
+                                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                                    <span>Ingresos</span>
+                                </div>
+                                <p class="font-metric font-semibold text-sm truncate" id="metric-income">$0.00</p>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5">
+                                <div class="flex items-center gap-1 text-[11px] text-amber-200 mb-0.5">
+                                    <i data-lucide="trending-down" class="w-3.5 h-3.5"></i>
+                                    <span>Gastos</span>
+                                </div>
+                                <p class="font-metric font-semibold text-sm truncate" id="metric-expense">$0.00</p>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5">
+                                <div class="flex items-center gap-1 text-[11px] text-blue-200 mb-0.5">
+                                    <i data-lucide="clock-alert" class="w-3.5 h-3.5"></i>
+                                    <span>Por Pagar</span>
+                                </div>
+                                <p class="font-metric font-semibold text-sm truncate" id="metric-debt">$0.00</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mis Cuentas Multidivisa -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="font-display font-bold text-sm text-navy-900">Cuentas por Moneda</h2>
+                            <button onclick="openModal('modal-account')" class="text-xs font-semibold text-brand-purple hover:underline flex items-center gap-1">
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Nueva Cuenta
+                            </button>
+                        </div>
+                        <div id="dashboard-accounts-list" class="space-y-3">
+                            <!-- Renderizado dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Distribución Visual por Divisa y Flujo de Caja -->
+                    <div class="bg-white rounded-3xl p-5 shadow-soft border border-slate-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="font-display font-bold text-sm text-navy-900">Distribución Multidivisa</h3>
+                                <p class="text-xs text-slate-400 font-light">Ponderación calculada sobre moneda pivote (USD)</p>
+                            </div>
+                            <span class="w-8 h-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center">
+                                <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                            </span>
+                        </div>
+                        <!-- Barra de progreso segmentada -->
+                        <div id="currency-distribution-bar" class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex gap-0.5 my-3"></div>
+                        <div id="currency-distribution-legend" class="grid grid-cols-2 gap-2 text-xs mt-3"></div>
+                    </div>
+
+                    <!-- Últimas Transacciones con Tasa Histórica Inmutable -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="font-display font-bold text-sm text-navy-900">Movimientos Recientes</h2>
+                            <button onclick="switchPwaTab('transactions')" class="text-xs font-semibold text-brand-blue hover:underline">Ver historial</button>
+                        </div>
+                        <div id="dashboard-recent-tx" class="space-y-2.5">
+                            <!-- Renderizado dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== VISTA 2: TRANSACCIONES ==================== -->
+                <section id="view-transactions" class="hidden space-y-4 animate-slide-up">
+                    <!-- Filtros de Transacciones -->
+                    <div class="bg-white rounded-2xl p-3 shadow-card border border-slate-100 space-y-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="tx-search-input" oninput="renderTransactionsView()" placeholder="Buscar concepto o categoría..."
+                                    class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-purple">
+                            </div>
+                            <select id="tx-filter-type" onchange="renderTransactionsView()"
+                                class="bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs font-medium text-navy-800 focus:outline-none">
+                                <option value="ALL">Todos</option>
+                                <option value="INCOME">Ingresos</option>
+                                <option value="EXPENSE">Gastos</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                            <span>Retención activa: máx. 2 años</span>
+                            <span id="tx-count-label">0 registros</span>
+                        </div>
+                    </div>
+
+                    <div id="full-transactions-list" class="space-y-2.5">
+                        <!-- Renderizado dinámicamente -->
+                    </div>
+                </section>
+
+                <!-- ==================== VISTA 3: CUENTAS POR PAGAR (DEUDAS) ==================== -->
+                <section id="view-debts" class="hidden space-y-4 animate-slide-up">
+                    <!-- Resumen de Pasivos y Cuentas por Cobrar -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white rounded-3xl p-4 shadow-soft border border-slate-100">
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-brand-amber flex items-center justify-center mb-2">
+                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-xs text-slate-400 font-light">Cuentas por Pagar</p>
+                            <p class="font-metric font-bold text-lg text-navy-900 mt-0.5" id="debts-total-payable">$0.00</p>
+                        </div>
+                        <div class="bg-white rounded-3xl p-4 shadow-soft border border-slate-100">
+                            <div class="w-8 h-8 rounded-xl bg-teal-50 text-brand-teal flex items-center justify-center mb-2">
+                                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-xs text-slate-400 font-light">Por Cobrar (Créditos)</p>
+                            <p class="font-metric font-bold text-lg text-navy-900 mt-0.5" id="debts-total-receivable">$0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-display font-bold text-sm text-navy-900">Obligaciones & Créditos Activos</h2>
+                        <button onclick="openModal('modal-debt')" class="text-xs font-semibold text-white bg-brand-blue px-3 py-1.5 rounded-xl shadow-glow-blue flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Registrar Deuda
+                        </button>
+                    </div>
+
+                    <div id="debts-list-container" class="space-y-3">
+                        <!-- Renderizado dinámicamente -->
+                    </div>
+                </section>
+
+                <!-- ==================== VISTA 4: AJUSTES, TASAS & SYNC ==================== -->
+                <section id="view-settings" class="hidden space-y-4 animate-slide-up">
+                    <!-- Estado de Base de Datos Local IndexedDB -->
+                    <div class="bg-white rounded-3xl p-5 shadow-soft border border-slate-100 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-purple-50 text-brand-purple flex items-center justify-center">
+                                    <i data-lucide="database" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-display font-bold text-sm text-navy-900">Motor Local IndexedDB</h3>
+                                    <p class="text-xs text-slate-400">Dexie.js v3 • UUIDv4 • Soft Deletes</p>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-teal-50 text-brand-teal">Activo</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                            <div class="bg-slate-50 rounded-2xl p-2.5">
+                                <p class="font-metric font-bold text-base text-navy-900" id="stat-db-accounts">0</p>
+                                <p class="text-[11px] text-slate-400">Cuentas</p>
+                            </div>
+                            <div class="bg-slate-50 rounded-2xl p-2.5">
+                                <p class="font-metric font-bold text-base text-navy-900" id="stat-db-tx">0</p>
+                                <p class="text-[11px] text-slate-400">Transacciones</p>
+                            </div>
+                            <div class="bg-slate-50 rounded-2xl p-2.5">
+                                <p class="font-metric font-bold text-base text-navy-900" id="stat-db-deleted">0</p>
+                                <p class="text-[11px] text-slate-400">Soft Deleted</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-2 pt-1">
+                            <button onclick="openModal('modal-rates')" class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200/70 text-navy-900 font-semibold text-xs flex items-center justify-between transition">
+                                <span class="flex items-center gap-2"><i data-lucide="coins" class="w-4 h-4 text-brand-amber"></i> Configurar Tasas de Cambio (Pivote USD)</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                            </button>
+                            <button onclick="openModal('modal-sync')" class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200/70 text-navy-900 font-semibold text-xs flex items-center justify-between transition">
+                                <span class="flex items-center gap-2"><i data-lucide="cloud-cog" class="w-4 h-4 text-brand-blue"></i> Configurar Endpoint Google Sheets (GAS)</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                            </button>
+                            <button onclick="runLocalRetentionPurge()" class="w-full py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 text-brand-orange font-semibold text-xs flex items-center justify-between transition">
+                                <span class="flex items-center gap-2"><i data-lucide="calendar-x-2" class="w-4 h-4"></i> Ejecutar Purga de Retención (> 2 Años)</span>
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="resetDemoDatabase()" class="w-full py-2.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs flex items-center justify-between transition">
+                                <span class="flex items-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar Datos Semilla de Demostración</span>
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Registro de Auditoría de Sincronización -->
+                    <div class="bg-white rounded-3xl p-5 shadow-soft border border-slate-100">
+                        <h3 class="font-display font-bold text-sm text-navy-900 mb-2">Bitácora de Sincronización (LWW)</h3>
+                        <div id="sync-audit-log" class="space-y-2 text-xs text-slate-500 max-h-48 overflow-y-auto">
+                            <!-- Logs de sync -->
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- BOTÓN FLOTANTE (FAB) PARA NUEVA TRANSACCIÓN -->
+            <button onclick="openTransactionModal()" title="Registrar Transacción"
+                class="absolute bottom-20 right-5 z-20 w-14 h-14 rounded-2xl bg-purple-gradient text-white shadow-glow-purple flex items-center justify-center hover:scale-105 active:scale-95 transition">
+                <i data-lucide="plus" class="w-7 h-7"></i>
+            </button>
+
+            <!-- BARRA DE NAVEGACIÓN INFERIOR (BOTTOM NAVIGATION BAR) -->
+            <nav class="bg-white border-t border-slate-200/80 px-3 py-2 flex items-center justify-around z-20">
+                <button onclick="switchPwaTab('dashboard')" id="nav-tab-dashboard" class="flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-brand-purple font-semibold">
+                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                    <span class="text-[10px]">Inicio</span>
+                </button>
+                <button onclick="switchPwaTab('transactions')" id="nav-tab-transactions" class="flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-slate-400 hover:text-navy-900 font-medium">
+                    <i data-lucide="arrow-up-down" class="w-5 h-5"></i>
+                    <span class="text-[10px]">Movimientos</span>
+                </button>
+                <button onclick="switchPwaTab('debts')" id="nav-tab-debts" class="flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-slate-400 hover:text-navy-900 font-medium">
+                    <i data-lucide="receipt-text" class="w-5 h-5"></i>
+                    <span class="text-[10px]">Por Pagar</span>
+                </button>
+                <button onclick="switchPwaTab('settings')" id="nav-tab-settings" class="flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-slate-400 hover:text-navy-900 font-medium">
+                    <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+                    <span class="text-[10px]">Sync & Tasas</span>
+                </button>
+            </nav>
+        </div>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- WORKSPACE 2: ARQUITECTURA, BACKEND GAS Y GUÍA DE DESPLIEGUE           -->
+    <!-- ===================================================================== -->
+    <section id="workspace-docs" class="hidden flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
+
+        <!-- Cabecera de Ingeniería -->
+        <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-brand-purple">Especificación Técnica Full-Stack</span>
+                <h2 class="font-display font-bold text-2xl text-navy-900 mt-2">Arquitectura del Sistema, Backend GAS & Despliegue</h2>
+                <p class="text-sm text-slate-500 mt-1">Todos los bloques modulares listos para producción en GitHub Pages y Google Apps Script.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="switchDocSection('arch')" id="doc-btn-arch" class="px-4 py-2 rounded-xl text-xs font-semibold bg-navy-900 text-white">1. Arquitectura & Esquema</button>
+                <button onclick="switchDocSection('gas')" id="doc-btn-gas" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-navy-800 hover:bg-slate-200">2. Backend GAS (Code.gs / Cleaner.gs)</button>
+                <button onclick="switchDocSection('pwa-files')" id="doc-btn-pwa-files" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-navy-800 hover:bg-slate-200">3. Manifest & Service Worker</button>
+                <button onclick="switchDocSection('deploy')" id="doc-btn-deploy" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-navy-800 hover:bg-slate-200">4. Guía Paso a Paso</button>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DOC 1: ARQUITECTURA DEL SISTEMA Y ESQUEMA RELACIONAL -->
+        <div id="doc-sec-arch" class="space-y-6 animate-slide-up">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                    <h3 class="font-display font-bold text-lg text-navy-900 flex items-center gap-2 mb-3">
+                        <i data-lucide="network" class="w-5 h-5 text-brand-purple"></i>
+                        1.1 Topología Offline-First & Sincronización LWW
+                    </h3>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                        La PWA implementa el patrón <strong>Local-First / Offline-First</strong>. La interfaz de usuario lee y escribe exclusivamente en <strong>IndexedDB (vía Dexie.js)</strong> con latencia cero. Cada mutación genera un identificador único universal (<code>UUID v4</code>), asigna la marca de tiempo exacta en milisegundos UTC (<code>updated_at</code>) y marca el registro con <code>sync_status = 'pending'</code>.
+                    </p>
+                    <ul class="space-y-2.5 text-xs text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 h-5 rounded-full bg-purple-50 text-brand-purple font-bold flex items-center justify-center shrink-0">1</span>
+                            <span><strong>Moneda Pivote (USD):</strong> Todas las tasas de cambio se almacenan como unidades de divisa por cada <code>1.00 USD</code>. Al registrar una transacción, se congela de forma inmutable <code>exchange_rate_used</code> y <code>amount_usd_pivot = original_amount / exchange_rate_used</code>.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 h-5 rounded-full bg-blue-50 text-brand-blue font-bold flex items-center justify-center shrink-0">2</span>
+                            <span><strong>Resolución de Conflictos (Last-Write-Wins):</strong> Durante el ciclo <code>PUSH/PULL</code> hacia Google Sheets, el motor compara <code>incoming.updated_at &gt; existing.updated_at</code>. El registro con mayor marca temporal prevalece.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 h-5 rounded-full bg-teal-50 text-brand-teal font-bold flex items-center justify-center shrink-0">3</span>
+                            <span><strong>Borrado Lógico (Soft Delete):</strong> Ningún registro se destruye físicamente al ser eliminado por el usuario; se actualiza <code>is_deleted = 1</code> y <code>updated_at = Date.now()</code> para propagar la baja a todos los dispositivos conectados.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                    <h3 class="font-display font-bold text-lg text-navy-900 flex items-center gap-2 mb-3">
+                        <i data-lucide="calculator" class="w-5 h-5 text-brand-teal"></i>
+                        1.2 Inmutabilidad Histórica vs. Conversión Dinámica
+                    </h3>
+                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/70 space-y-3 text-xs">
+                        <div>
+                            <p class="font-semibold text-navy-900">A. En el momento del registro (Inmutable):</p>
+                            <p class="text-slate-500 mt-0.5">Si el usuario registra un gasto de <code>4,550.00 BS</code> cuando la tasa manual es <code>45.50 BS/USD</code>:</p>
+                            <code class="block bg-navy-900 text-teal-300 p-2.5 rounded-xl mt-1.5 font-mono text-[11px]">
+                                original_amount: 4550.00<br>
+                                original_currency: "BS"<br>
+                                exchange_rate_used: 45.50 // Inmutable<br>
+                                amount_usd_pivot: 100.00  // Inmutable (4550 / 45.50)
+                            </code>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-navy-900">B. Al visualizar saldos de cuentas (Dinámico):</p>
+                            <p class="text-slate-500 mt-0.5">El saldo nativo de cada cuenta es la suma algebraica exacta en su moneda original. Al alternar el selector superior a cualquier moneda destino <code>M_dest</code>:</p>
+                            <code class="block bg-navy-900 text-amber-300 p-2.5 rounded-xl mt-1.5 font-mono text-[11px]">
+                                saldo_USD = saldo_nativo / tasa_actual[moneda_cuenta]<br>
+                                saldo_M_dest = saldo_USD * tasa_actual[M_dest]
+                            </code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Esquema Relacional Detallado -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                <h3 class="font-display font-bold text-lg text-navy-900 mb-4">1.3 Esquema de Datos Relacional (IndexedDB & Hojas de Google Sheets)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-slate-400 uppercase">
+                                <th class="py-3 px-3">Entidad / Hoja</th>
+                                <th class="py-3 px-3">Clave Primaria</th>
+                                <th class="py-3 px-3">Campos de Negocio y Multidivisa</th>
+                                <th class="py-3 px-3">Campos de Sincronización & Auditoría</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr>
+                                <td class="py-3 px-3 font-display font-bold text-brand-purple">accounts</td>
+                                <td class="py-3 px-3 font-mono">id (UUIDv4)</td>
+                                <td class="py-3 px-3 font-mono">name, currency (USD|USDT|BS|EUR), initial_balance, color, icon</td>
+                                <td class="py-3 px-3 font-mono">created_at, updated_at, is_deleted (0|1), sync_status</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-3 font-display font-bold text-brand-teal">transactions</td>
+                                <td class="py-3 px-3 font-mono">id (UUIDv4)</td>
+                                <td class="py-3 px-3 font-mono">account_id (FK), debt_id (FK nullable), type (INCOME|EXPENSE), category, description, original_amount, original_currency, exchange_rate_used, amount_usd_pivot, tx_date</td>
+                                <td class="py-3 px-3 font-mono">created_at, updated_at, is_deleted (0|1), sync_status</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-3 font-display font-bold text-brand-blue">debts</td>
+                                <td class="py-3 px-3 font-mono">id (UUIDv4)</td>
+                                <td class="py-3 px-3 font-mono">kind (PAYABLE|RECEIVABLE), counterparty, title, currency, total_amount, paid_amount, exchange_rate_created, due_date, status (PENDING|PARTIAL|PAID)</td>
+                                <td class="py-3 px-3 font-mono">created_at, updated_at, is_deleted (0|1), sync_status</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-3 font-display font-bold text-brand-amber">exchange_rates</td>
+                                <td class="py-3 px-3 font-mono">currency (PK)</td>
+                                <td class="py-3 px-3 font-mono">rate_to_usd (unidades por 1 USD), symbol</td>
+                                <td class="py-3 px-3 font-mono">updated_at, sync_status</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DOC 2: BACKEND GOOGLE APPS SCRIPT (Code.gs y Cleaner.gs) -->
+        <div id="doc-sec-gas" class="hidden space-y-6 animate-slide-up">
+            <!-- Bloque 1: Code.gs -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <span class="text-xs font-semibold text-brand-blue uppercase">Archivo 1 de 2 • Google Apps Script</span>
+                        <h3 class="font-display font-bold text-lg text-navy-900">Code.gs — Endpoints Bidireccionales GET/POST & Resolución de Conflictos</h3>
+                    </div>
+                    <button onclick="copyCodeBlock('code-gs-content', 'Code.gs')" class="px-3.5 py-2 rounded-xl bg-navy-900 text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-slate-800 transition">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Code.gs
+                    </button>
+                </div>
+                <pre id="code-gs-content" class="code-block">/**
+ * ============================================================================
+ * FINANZAS PWA - BACKEND SINCRONIZACIÓN BIDIRECCIONAL (Code.gs)
+ * ============================================================================
+ * Soporta:
+ * - Inicialización automática de hojas y cabeceras (accounts, transactions, debts, exchange_rates)
+ * - Bloqueo de concurrencia mediante LockService
+ * - Resolución de conflictos Last-Write-Wins (updated_at en milisegundos UTC)
+ * - Borrado lógico (is_deleted = 1)
+ * - Peticiones POST con Content-Type: text/plain;charset=utf-8 para evitar bloqueos CORS preflight
+ */
+
+const TABLES = {
+  accounts: [
+    'id', 'name', 'currency', 'initial_balance', 'color', 'icon',
+    'created_at', 'updated_at', 'is_deleted'
+  ],
+  transactions: [
+    'id', 'account_id', 'debt_id', 'type', 'category', 'description',
+    'original_amount', 'original_currency', 'exchange_rate_used', 'amount_usd_pivot',
+    'tx_date', 'created_at', 'updated_at', 'is_deleted'
+  ],
+  debts: [
+    'id', 'kind', 'counterparty', 'title', 'currency', 'total_amount',
+    'paid_amount', 'exchange_rate_created', 'due_date', 'status',
+    'created_at', 'updated_at', 'is_deleted'
+  ],
+  exchange_rates: [
+    'id', 'currency', 'rate_to_usd', 'symbol', 'updated_at', 'is_deleted'
+  ]
+};
+
+/**
+ * Endpoint GET: Permite verificar el estado del servicio o descargar deltas (?since=timestamp)
+ */
+function doGet(e) {
+  try {
+    ensureSheetsExist_();
+    const since = e && e.parameter && e.parameter.since ? Number(e.parameter.since) : 0;
+    const serverData = pullChangesSince_(since);
+
+    return buildJsonResponse_({
+      status: 'ok',
+      server_timestamp: Date.now(),
+      changes: serverData
+    });
+  } catch (err) {
+    return buildJsonResponse_({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * Endpoint POST: Sincronización bidireccional en una sola transacción atómica.
+ * Recibe los cambios locales pendientes (push) y devuelve las novedades del servidor (pull).
+ */
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000); // Evita condiciones de carrera entre múltiples dispositivos
+
+  try {
+    ensureSheetsExist_();
+    const rawBody = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
+    const payload = JSON.parse(rawBody);
+
+    const lastSyncAt = Number(payload.last_sync_at || 0);
+    const clientChanges = payload.changes || {};
+    const stats = { inserted: 0, updated: 0, ignored_older: 0 };
+
+    // 1. APLICAR PUSH DEL CLIENTE CON RESOLUCIÓN DE CONFLICTOS (updated_at)
+    Object.keys(TABLES).forEach(tableName => {
+      const incomingRows = clientChanges[tableName] || [];
+      if (incomingRows.length > 0) {
+        const tableStats = upsertTableRows_(tableName, TABLES[tableName], incomingRows);
+        stats.inserted += tableStats.inserted;
+        stats.updated += tableStats.updated;
+        stats.ignored_older += tableStats.ignored_older;
+      }
+    });
+
+    // 2. EXTRAER PULL DEL SERVIDOR (Registros con updated_at > lastSyncAt)
+    const serverChanges = pullChangesSince_(lastSyncAt);
+
+    return buildJsonResponse_({
+      status: 'ok',
+      server_timestamp: Date.now(),
+      stats: stats,
+      changes: serverChanges
+    });
+  } catch (err) {
+    return buildJsonResponse_({ status: 'error', message: err.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Inserta o actualiza registros comparando marcas de tiempo (updated_at)
+ */
+function upsertTableRows_(sheetName, headers, incomingRecords) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(sheetName);
+  const data = sheet.getDataRange().getValues();
+
+  const idIdx = headers.indexOf('id');
+  const updatedIdx = headers.indexOf('updated_at');
+
+  // Mapa rápido de UUID -> índice de fila en la hoja (1-based)
+  const existingMap = {};
+  for (let r = 1; r < data.length; r++) {
+    const rowId = String(data[r][idIdx]);
+    if (rowId) {
+      existingMap[rowId] = {
+        rowNumber: r + 1,
+        updatedAt: Number(data[r][updatedIdx] || 0)
+      };
+    }
+  }
+
+  let inserted = 0, updated = 0, ignored_older = 0;
+
+  incomingRecords.forEach(record => {
+    const recId = String(record.id);
+    const recUpdatedAt = Number(record.updated_at || Date.now());
+    const rowArray = headers.map(col => (record[col] !== undefined && record[col] !== null) ? record[col] : '');
+
+    if (!existingMap[recId]) {
+      sheet.appendRow(rowArray);
+      inserted++;
+    } else {
+      const currentServerUpdated = existingMap[recId].updatedAt;
+      // Regla Last-Write-Wins: Solo sobrescribe si el registro entrante es más reciente o igual
+      if (recUpdatedAt >= currentServerUpdated) {
+        sheet.getRange(existingMap[recId].rowNumber, 1, 1, headers.length).setValues([rowArray]);
+        updated++;
+      } else {
+        ignored_older++;
+      }
+    }
+  });
+
+  return { inserted, updated, ignored_older };
+}
+
+/**
+ * Obtiene todos los registros modificados después de `sinceTimestamp`
+ */
+function pullChangesSince_(sinceTimestamp) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const result = {};
+
+  Object.keys(TABLES).forEach(tableName => {
+    const headers = TABLES[tableName];
+    const sheet = ss.getSheetByName(tableName);
+    const rows = sheet.getDataRange().getValues();
+    const updatedIdx = headers.indexOf('updated_at');
+    const list = [];
+
+    for (let r = 1; r < rows.length; r++) {
+      const rowUpdated = Number(rows[r][updatedIdx] || 0);
+      if (rowUpdated >= sinceTimestamp) {
+        const obj = {};
+        headers.forEach((h, i) => {
+          obj[h] = rows[r][i];
+        });
+        list.push(obj);
+      }
+    }
+    result[tableName] = list;
+  });
+
+  return result;
+}
+
+/**
+ * Crea automáticamente las pestañas y encabezados si el Google Sheet está vacío
+ */
+function ensureSheetsExist_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  Object.keys(TABLES).forEach(tableName => {
+    let sheet = ss.getSheetByName(tableName);
+    if (!sheet) {
+      sheet = ss.insertSheet(tableName);
+      sheet.appendRow(TABLES[tableName]);
+      sheet.getRange(1, 1, 1, TABLES[tableName].length).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+  });
+}
+
+function buildJsonResponse_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+            </div>
+
+            <!-- Bloque 2: Cleaner.gs -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <span class="text-xs font-semibold text-brand-amber uppercase">Archivo 2 de 2 • Cron Job de Retención</span>
+                        <h3 class="font-display font-bold text-lg text-navy-900">Cleaner.gs — Purga Automática de Historial (&gt; 2 Años)</h3>
+                    </div>
+                    <button onclick="copyCodeBlock('cleaner-gs-content', 'Cleaner.gs')" class="px-3.5 py-2 rounded-xl bg-navy-900 text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-slate-800 transition">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Cleaner.gs
+                    </button>
+                </div>
+                <pre id="cleaner-gs-content" class="code-block">/**
+ * ============================================================================
+ * FINANZAS PWA - CRON JOB DE RETENCIÓN DE DATOS DE 2 AÑOS (Cleaner.gs)
+ * ============================================================================
+ * Elimina físicamente de Google Sheets:
+ * 1. Transacciones cuya fecha (tx_date o created_at) supere los 2 años (730 días).
+ * 2. Deudas pagadas o marcadas con borrado lógico (is_deleted = 1) con más de 2 años.
+ */
+
+const TWO_YEARS_MS = 2 * 365 * 24 * 60 * 60 * 1000; // 63,072,000,000 ms
+
+/**
+ * Función principal ejecutada por el Trigger Temporal diario
+ */
+function purgeOldHistoricalData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const cutoffTimestamp = Date.now() - TWO_YEARS_MS;
+
+  // 1. Purgar Transacciones mayores a 2 años
+  const txSheet = ss.getSheetByName('transactions');
+  if (txSheet) {
+    const rows = txSheet.getDataRange().getValues();
+    const headers = rows[0] || [];
+    const txDateIdx = headers.indexOf('tx_date');
+    const createdIdx = headers.indexOf('created_at');
+
+    // Iteración inversa (bottom-up) para no alterar los índices al eliminar filas
+    for (let r = rows.length - 1; r >= 1; r--) {
+      const rawTxDate = rows[r][txDateIdx];
+      const createdAt = Number(rows[r][createdIdx] || 0);
+      const effectiveTime = rawTxDate ? new Date(rawTxDate).getTime() : createdAt;
+
+      if (effectiveTime > 0 && effectiveTime < cutoffTimestamp) {
+        txSheet.deleteRow(r + 1);
+      }
+    }
+  }
+
+  // 2. Purgar Deudas saldadas o eliminadas mayores a 2 años
+  const debtSheet = ss.getSheetByName('debts');
+  if (debtSheet) {
+    const rows = debtSheet.getDataRange().getValues();
+    const headers = rows[0] || [];
+    const updatedIdx = headers.indexOf('updated_at');
+    const statusIdx = headers.indexOf('status');
+    const deletedIdx = headers.indexOf('is_deleted');
+
+    for (let r = rows.length - 1; r >= 1; r--) {
+      const updatedAt = Number(rows[r][updatedIdx] || 0);
+      const status = String(rows[r][statusIdx]);
+      const isDeleted = Number(rows[r][deletedIdx] || 0) === 1;
+
+      if ((status === 'PAID' || isDeleted) && updatedAt > 0 && updatedAt < cutoffTimestamp) {
+        debtSheet.deleteRow(r + 1);
+      }
+    }
+  }
+}
+
+/**
+ * Ejecuta esta función UNA SOLA VEZ desde el editor de Google Apps Script
+ * para dejar programado el Cron Job automático todos los días a las 03:00 AM.
+ */
+function installTwoYearRetentionTrigger() {
+  const existingTriggers = ScriptApp.getProjectTriggers();
+  existingTriggers.forEach(t => {
+    if (t.getHandlerFunction() === 'purgeOldHistoricalData') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('purgeOldHistoricalData')
+    .timeBased()
+    .everyDays(1)
+    .atHour(3)
+    .create();
+}</pre>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DOC 3: MANIFEST.JSON Y SERVICE WORKER (SW.JS) -->
+        <div id="doc-sec-pwa-files" class="hidden space-y-6 animate-slide-up">
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- manifest.json -->
+                <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <span class="text-xs font-semibold text-brand-purple uppercase">Configuración Instalable</span>
+                            <h3 class="font-display font-bold text-base text-navy-900">manifest.json</h3>
+                        </div>
+                        <button onclick="copyCodeBlock('manifest-json-content', 'manifest.json')" class="px-3 py-1.5 rounded-xl bg-navy-900 text-white text-xs font-semibold flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+                        </button>
+                    </div>
+                    <pre id="manifest-json-content" class="code-block">{
+  "name": "FinanzasPWA — Control Multidivisa",
+  "short_name": "FinanzasPWA",
+  "description": "Gestión financiera personal offline-first con soporte multidivisa y sincronización Google Sheets.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6F9",
+  "theme_color": "#6D28D9",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/6D28D9/FFFFFF.png?text=FP",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/6D28D9/FFFFFF.png?text=FP",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}</pre>
+                </div>
+
+                <!-- sw.js -->
+                <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <span class="text-xs font-semibold text-brand-teal uppercase">Motor Offline-First</span>
+                            <h3 class="font-display font-bold text-base text-navy-900">sw.js (Service Worker)</h3>
+                        </div>
+                        <button onclick="copyCodeBlock('sw-js-content', 'sw.js')" class="px-3 py-1.5 rounded-xl bg-navy-900 text-white text-xs font-semibold flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+                        </button>
+                    </div>
+                    <pre id="sw-js-content" class="code-block">const CACHE_NAME = 'finanzas-pwa-v1.2';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/dexie@3.2.4/dist/dexie.min.js',
+  'https://unpkg.com/lucide@latest'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // Nunca interceptar llamadas de sincronización a Google Apps Script
+  if (url.hostname.includes('script.google.com') || url.hostname.includes('googleusercontent.com')) {
+    return;
+  }
+
+  // Estrategia Stale-While-Revalidate para activos estáticos y navegación
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
+    })
+  );
+});</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DOC 4: GUÍA PASO A PASO DE DESPLIEGUE -->
+        <div id="doc-sec-deploy" class="hidden space-y-6 animate-slide-up">
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 space-y-5">
+                <h3 class="font-display font-bold text-lg text-navy-900">Guía Paso a Paso: Despliegue en GitHub Pages y Conexión con Google Sheets</h3>
+
+                <div class="grid md:grid-cols-2 gap-5 text-xs text-slate-600">
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/70 space-y-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-brand-blue font-bold">FASE 1: Configurar Google Sheets & Apps Script</span>
+                        <ol class="list-decimal list-inside space-y-2 leading-relaxed">
+                            <li>Crea una hoja de cálculo nueva en <strong>Google Sheets</strong> (ej. <code>FinanzasPWA_DB</code>).</li>
+                            <li>En el menú superior, abre <strong>Extensiones &gt; Apps Script</strong>.</li>
+                            <li>Reemplaza el contenido de <code>Código.gs</code> con el bloque <strong>Code.gs</strong> de la pestaña anterior.</li>
+                            <li>Haz clic en el icono <strong>(+) &gt; Secuencia de comandos</strong>, nómbralo <code>Cleaner</code> y pega el código de <strong>Cleaner.gs</strong>.</li>
+                            <li>Selecciona la función <code>installTwoYearRetentionTrigger</code> en la barra superior y pulsa <strong>Ejecutar</strong> (acepta los permisos de tu cuenta Google). Esto activará la purga automática de registros mayores a 2 años.</li>
+                            <li>Haz clic en <strong>Implementar &gt; Nueva implementación</strong>.</li>
+                            <li>Elige tipo: <strong>Aplicación web</strong>. En <em>Ejecutar como</em> selecciona <strong>Yo</strong>, y en <em>Quién tiene acceso</em> selecciona <strong>Cualquier persona</strong> (necesario para peticiones CORS desde GitHub Pages).</li>
+                            <li>Copia la <strong>URL de la aplicación web</strong> generada (termina en <code>/exec</code>).</li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/70 space-y-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-brand-purple font-bold">FASE 2: Publicar en GitHub Pages y Vincular</span>
+                        <ol class="list-decimal list-inside space-y-2 leading-relaxed">
+                            <li>Crea un nuevo repositorio en GitHub (ej. <code>finanzas-pwa</code>).</li>
+                            <li>Sube este archivo <code>index.html</code> junto con los archivos <code>manifest.json</code> y <code>sw.js</code> en la raíz del repositorio.</li>
+                            <li>En tu repositorio de GitHub, entra en <strong>Settings &gt; Pages</strong>.</li>
+                            <li>En <strong>Build and deployment &gt; Branch</strong>, selecciona <code>main</code> y carpeta <code>/ (root)</code>, luego pulsa <strong>Save</strong>.</li>
+                            <li>Abre la URL HTTPS generada (<code>https://tu-usuario.github.io/finanzas-pwa/</code>) desde el navegador de tu teléfono móvil.</li>
+                            <li>Pulsa el icono de <strong>Sincronización (arriba a la derecha)</strong> en la PWA, pega la URL <code>https://script.google.com/macros/s/.../exec</code> y pulsa <strong>Sincronizar Ahora</strong>.</li>
+                            <li>En tu móvil (Chrome en Android o Safari en iOS), selecciona <strong>"Añadir a pantalla de inicio"</strong> para instalarla como aplicación nativa independiente.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MODALES INTERACTIVOS DE LA PWA                                        -->
+    <!-- ===================================================================== -->
+
+    <!-- MODAL 1: REGISTRAR / EDITAR TRANSACCIÓN (CON TASA INMUTABLE) -->
+    <div id="modal-transaction" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[430px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-base text-navy-900" id="tx-modal-title">Registrar Movimiento</h3>
+                <button onclick="closeModal('modal-transaction')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="form-transaction" onsubmit="saveTransaction(event)" class="space-y-3.5">
+                <input type="hidden" id="tx-id" value="">
+
+                <!-- Selector Tipo: Gasto vs Ingreso -->
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+                    <button type="button" id="btn-type-expense" onclick="setTxType('EXPENSE')" class="py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-orange shadow-xs transition">
+                        Gasto (-)
+                    </button>
+                    <button type="button" id="btn-type-income" onclick="setTxType('INCOME')" class="py-2 rounded-xl font-display font-semibold text-xs text-slate-500 transition">
+                        Ingreso (+)
+                    </button>
+                </div>
+
+                <!-- Selección de Cuenta -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Cuenta Origen / Destino</label>
+                    <select id="tx-account" onchange="handleTxAccountChange()" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
+                    </select>
+                </div>
+
+                <!-- Monto Original y Tasa Histórica Inmutable -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Monto (<span id="tx-currency-label">USD</span>)</label>
+                        <input type="number" step="0.01" min="0.01" id="tx-amount" oninput="recalculateTxPreview()" required placeholder="0.00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Tasa (<span id="tx-rate-unit-label">x 1 USD</span>)</label>
+                        <input type="number" step="0.0001" min="0.0001" id="tx-exchange-rate" oninput="recalculateTxPreview()" required
+                            class="w-full bg-amber-50/60 border border-amber-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-amber">
+                    </div>
+                </div>
+
+                <!-- Banner de Equivalencia Pivote Inmutable -->
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between text-xs">
+                    <span class="text-slate-500 flex items-center gap-1.5">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-brand-purple"></i>
+                        Valor Pivote Inmutable:
+                    </span>
+                    <span class="font-metric font-bold text-navy-900" id="tx-usd-pivot-preview">$0.00 USD</span>
+                </div>
+
+                <!-- Categoría y Fecha -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Categoría</label>
+                        <select id="tx-category" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
+                            <option value="Alimentación">Alimentación</option>
+                            <option value="Servicios">Servicios / Internet</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Salud">Salud</option>
+                            <option value="Salario / Honorarios">Salario / Honorarios</option>
+                            <option value="Ventas / Negocio">Ventas / Negocio</option>
+                            <option value="Abono Deuda">Abono / Pago Deuda</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
+                        <input type="date" id="tx-date" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
+                    </div>
+                </div>
+
+                <!-- Descripción -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Concepto / Nota</label>
+                    <input type="text" id="tx-description" required placeholder="Ej. Compra supermercado / Pago cliente"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple hover:opacity-95 transition">
+                    Guardar Registro Histórico
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CREAR NUEVA CUENTA MULTIDIVISA -->
+    <div id="modal-account" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-base text-navy-900">Nueva Cuenta / Billetera</h3>
+                <button onclick="closeModal('modal-account')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form onsubmit="saveAccount(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Nombre de la Cuenta</label>
+                    <input type="text" id="acc-name" required placeholder="Ej. Banesco, Binance USDT, Zelle..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-medium text-navy-900">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Moneda Nativa</label>
+                        <select id="acc-currency" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-semibold text-navy-900">
+                            <option value="USD">USD ($) - Dólar</option>
+                            <option value="USDT">USDT (₮) - Tether</option>
+                            <option value="BS">BS (Bs.) - Bolívar</option>
+                            <option value="EUR">EUR (€) - Euro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Saldo Inicial</label>
+                        <input type="number" step="0.01" id="acc-initial" value="0.00" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Estilo de Acento</label>
+                    <select id="acc-color" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
+                        <option value="purple">Morado Degradado</option>
+                        <option value="blue">Azul Intenso</option>
+                        <option value="teal">Verde Cerceta (Teal)</option>
+                        <option value="amber">Naranja / Ámbar</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-2xl bg-navy-900 text-white font-display font-semibold text-xs">
+                    Crear Cuenta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REGISTRAR DEUDA / CUENTA POR PAGAR O COBRAR -->
+    <div id="modal-debt" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-base text-navy-900">Registrar Obligación / Crédito</h3>
+                <button onclick="closeModal('modal-debt')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form onsubmit="saveDebt(event)" class="space-y-3.5">
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+                    <button type="button" id="btn-debt-payable" onclick="setDebtKind('PAYABLE')" class="py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-amber shadow-xs">
+                        Por Pagar (Deuda)
+                    </button>
+                    <button type="button" id="btn-debt-receivable" onclick="setDebtKind('RECEIVABLE')" class="py-2 rounded-xl font-display font-semibold text-xs text-slate-500">
+                        Por Cobrar (Crédito)
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Acreedor / Deudor</label>
+                    <input type="text" id="debt-counterparty" required placeholder="Ej. Proveedor, Tarjeta, Préstamo..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-navy-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Concepto</label>
+                    <input type="text" id="debt-title" required placeholder="Ej. Cuota equipo / Factura mercancía"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-navy-900">
+                </div>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Moneda</label>
+                        <select id="debt-currency" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-2.5 py-2.5 text-xs font-semibold text-navy-900">
+                            <option value="USD">USD</option>
+                            <option value="USDT">USDT</option>
+                            <option value="BS">BS</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Monto Total</label>
+                        <input type="number" step="0.01" min="0.01" id="debt-total" required placeholder="0.00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 font-metric font-semibold text-xs text-navy-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Vencimiento</label>
+                        <input type="date" id="debt-due" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-2.5 py-2.5 text-xs text-navy-900">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-2xl bg-brand-blue text-white font-display font-semibold text-xs shadow-glow-blue">
+                    Guardar Registro
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ABONAR / PAGAR DEUDA -->
+    <div id="modal-pay-debt" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[410px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-base text-navy-900">Registrar Abono / Pago</h3>
+                <button onclick="closeModal('modal-pay-debt')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form onsubmit="submitDebtPayment(event)" class="space-y-3.5">
+                <input type="hidden" id="pay-debt-id">
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/70 text-xs">
+                    <p class="font-semibold text-navy-900" id="pay-debt-summary-title">Deuda</p>
+                    <p class="text-slate-500 mt-0.5" id="pay-debt-summary-remaining">Pendiente: $0.00</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Cuenta desde donde se liquida</label>
+                    <select id="pay-debt-account" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-semibold text-navy-900"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Monto a Abonar (<span id="pay-debt-curr-span">USD</span>)</label>
+                        <input type="number" step="0.01" min="0.01" id="pay-debt-amount" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-xs text-navy-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Tasa del Momento (vs USD)</label>
+                        <input type="number" step="0.0001" min="0.0001" id="pay-debt-rate" required
+                            class="w-full bg-amber-50/70 border border-amber-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-2xl bg-brand-teal text-white font-display font-semibold text-xs">
+                    Confirmar Abono y Generar Transacción
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: CONFIGURAR TASAS DE CAMBIO MANUALES (PIVOTE USD) -->
+    <div id="modal-rates" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-display font-bold text-base text-navy-900">Tasas de Cambio Manuales</h3>
+                    <p class="text-xs text-slate-400">Moneda Pivote Base: <strong>1.00 USD ($)</strong></p>
+                </div>
+                <button onclick="closeModal('modal-rates')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                Modificar estas tasas actualizará las equivalencias de visualización de saldos y servirá como valor predeterminado para nuevos movimientos, <strong>sin alterar las tasas históricas ya guardadas</strong> en transacciones pasadas.
+            </p>
+            <form onsubmit="saveExchangeRates(event)" class="space-y-3">
+                <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
+                    <div>
+                        <span class="font-display font-bold text-xs text-navy-900">BS (Bolívares)</span>
+                        <p class="text-[11px] text-slate-400">Unidades de BS por 1 USD</p>
+                    </div>
+                    <input type="number" step="0.01" min="0.0001" id="rate-input-BS" required
+                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
+                    <div>
+                        <span class="font-display font-bold text-xs text-navy-900">USDT (Tether)</span>
+                        <p class="text-[11px] text-slate-400">Unidades de USDT por 1 USD</p>
+                    </div>
+                    <input type="number" step="0.001" min="0.0001" id="rate-input-USDT" required
+                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
+                    <div>
+                        <span class="font-display font-bold text-xs text-navy-900">EUR (Euro)</span>
+                        <p class="text-[11px] text-slate-400">Unidades de EUR por 1 USD</p>
+                    </div>
+                    <input type="number" step="0.001" min="0.0001" id="rate-input-EUR" required
+                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple">
+                    Actualizar Tasas Activas
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 6: SINCRONIZACIÓN BIDIRECCIONAL GOOGLE SHEETS -->
+    <div id="modal-sync" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[430px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center">
+                        <i data-lucide="cloud-upload" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-navy-900">Sincronización Google Sheets</h3>
+                        <p class="text-xs text-slate-400">Bidireccional • UUIDs • Last-Write-Wins</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-sync')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">URL del Web App de Google Apps Script (<code>/exec</code>)</label>
+                    <input type="url" id="gas-endpoint-input" placeholder="https://script.google.com/macros/s/.../exec"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-mono text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                    <p class="text-[11px] text-slate-400 mt-1">Si se deja vacío, la app ejecutará una <strong>Simulación Local de Sincronización LWW</strong> para pruebas instantáneas.</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/70 space-y-1.5 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Cambios locales pendientes (Push):</span>
+                        <span class="font-display font-bold text-brand-amber" id="sync-modal-pending-count">0 registros</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Última sincronización exitosa:</span>
+                        <span class="font-medium text-navy-900" id="sync-modal-last-time">Nunca</span>
+                    </div>
+                </div>
+
+                <button onclick="triggerBidirectionalSync()" id="btn-execute-sync" class="w-full py-3.5 rounded-2xl bg-blue-gradient text-white font-display font-semibold text-xs shadow-glow-blue flex items-center justify-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Sincronizar Ahora con Google Sheets</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST DE NOTIFICACIÓN NO INTRUSIVO (REEMPLAZA ALERT/CONFIRM) -->
+    <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+
+    <!-- ===================================================================== -->
+    <!-- CONTROLADORES JAVASCRIPT: INDEXEDDB (DEXIE), MULTIDIVISA Y SYNC GAS   -->
+    <!-- ===================================================================== -->
+    <script>
+        /**
+         * 1. DEFINICIÓN DE BASE DE DATOS LOCAL (IndexedDB con Dexie.js + Fallback en Memoria)
+         */
+        const db = new Dexie('FinanzasPWADatabase');
+        db.version(1).stores({
+            accounts: 'id, currency, updated_at, is_deleted, sync_status',
+            transactions: 'id, account_id, debt_id, type, tx_date, updated_at, is_deleted, sync_status',
+            debts: 'id, kind, status, updated_at, is_deleted, sync_status',
+            exchange_rates: 'id, currency, updated_at, sync_status',
+            app_meta: 'key'
+        });
+
+        // Estado reactivo en memoria sincronizado con IndexedDB
+        const AppState = {
+            displayCurrency: 'ORIGINAL', // 'ORIGINAL' | 'USD' | 'USDT' | 'BS' | 'EUR'
+            currentTxType: 'EXPENSE',
+            currentDebtKind: 'PAYABLE',
+            rates: {
+                USD: { id: 'rate-USD', currency: 'USD', rate_to_usd: 1.00, symbol: '$', updated_at: Date.now(), sync_status: 'synced' },
+                USDT: { id: 'rate-USDT', currency: 'USDT', rate_to_usd: 1.00, symbol: '₮', updated_at: Date.now(), sync_status: 'synced' },
+                BS: { id: 'rate-BS', currency: 'BS', rate_to_usd: 45.50, symbol: 'Bs.', updated_at: Date.now(), sync_status: 'synced' },
+                EUR: { id: 'rate-EUR', currency: 'EUR', rate_to_usd: 0.92, symbol: '€', updated_at: Date.now(), sync_status: 'synced' }
+            },
+            accounts: [],
+            transactions: [],
+            debts: [],
+            lastSyncTimestamp: 0,
+            gasWebAppUrl: '',
+            syncLogs: []
+        };
+
+        /**
+         * Generador UUID v4 estándar para claves primarias distribuidas
+         */
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        /**
+         * 2. LÓGICA DE CÁLCULOS MULTIDIVISA Y MONEDA PIVOTE (USD)
+         */
+        const CurrencyEngine = {
+            getSymbol(currency) {
+                return AppState.rates[currency]?.symbol || '$';
+            },
+
+            getRateToUSD(currency) {
+                if (currency === 'USD') return 1.0;
+                return Number(AppState.rates[currency]?.rate_to_usd || 1.0);
+            },
+
+            // Convierte un monto desde una moneda origen hacia el pivote USD usando tasa actual o histórica
+            toUSDPivot(amount, fromCurrency, customRate = null) {
+                const num = Number(amount || 0);
+                if (fromCurrency === 'USD') return num;
+                const rate = customRate !== null ? Number(customRate) : this.getRateToUSD(fromCurrency);
+                return rate > 0 ? num / rate : num;
+            },
+
+            // Convierte desde USD Pivote hacia cualquier moneda de visualización
+            fromUSDPivot(usdAmount, targetCurrency) {
+                const num = Number(usdAmount || 0);
+                if (targetCurrency === 'USD') return num;
+                const rate = this.getRateToUSD(targetCurrency);
+                return num * rate;
+            },
+
+            // Convierte entre dos monedas cualesquiera pasando siempre por el pivote USD
+            convert(amount, fromCurrency, toCurrency) {
+                if (fromCurrency === toCurrency) return Number(amount || 0);
+                const usd = this.toUSDPivot(amount, fromCurrency);
+                return this.fromUSDPivot(usd, toCurrency);
+            },
+
+            format(amount, currency) {
+                const num = Number(amount || 0);
+                const sym = this.getSymbol(currency);
+                const formatted = num.toLocaleString('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                return `${sym} ${formatted} ${currency}`;
+            }
+        };
+
+        /**
+         * 3. INICIALIZACIÓN Y DATOS SEMILLA DE DEMOSTRACIÓN
+         */
+        async function initDatabaseAndSeed() {
+            try {
+                const accCount = await db.accounts.count();
+                if (accCount === 0) {
+                    await seedInitialData();
+                }
+                await loadStateFromIndexedDB();
+                renderAllViews();
+                registerInlineServiceWorker();
+            } catch (err) {
+                console.warn('IndexedDB restringido en este entorno sandbox, operando con réplica en memoria:', err);
+                await seedInMemoryFallback();
+                renderAllViews();
+            }
+        }
+
+        async function seedInitialData() {
+            const now = Date.now();
+            const dayMs = 86400000;
+
+            const ratesArray = Object.values(AppState.rates);
+            await db.exchange_rates.bulkPut(ratesArray);
+
+            const accUSD = {
+                id: generateUUID(),
+                name: 'Zelle / Efectivo USD',
+                currency: 'USD',
+                initial_balance: 850.00,
+                color: 'purple',
+                icon: 'dollar-sign',
+                created_at: now - 20 * dayMs,
+                updated_at: now - 20 * dayMs,
+                is_deleted: 0,
+                sync_status: 'synced'
+            };
+            const accUSDT = {
+                id: generateUUID(),
+                name: 'Binance Pay (USDT)',
+                currency: 'USDT',
+                initial_balance: 620.00,
+                color: 'teal',
+                icon: 'shield-check',
+                created_at: now - 18 * dayMs,
+                updated_at: now - 18 * dayMs,
+                is_deleted: 0,
+                sync_status: 'synced'
+            };
+            const accBS = {
+                id: generateUUID(),
+                name: 'Banesco PagoMóvil',
+                currency: 'BS',
+                initial_balance: 14500.00,
+                color: 'blue',
+                icon: 'landmark',
+                created_at: now - 15 * dayMs,
+                updated_at: now - 15 * dayMs,
+                is_deleted: 0,
+                sync_status: 'synced'
+            };
+
+            await db.accounts.bulkPut([accUSD, accUSDT, accBS]);
+
+            // Transacciones con diferentes tasas históricas inmutables para demostrar el requerimiento
+            const sampleTx = [
+                {
+                    id: generateUUID(),
+                    account_id: accUSDT.id,
+                    debt_id: null,
+                    type: 'INCOME',
+                    category: 'Salario / Honorarios',
+                    description: 'Milestone Desarrollo Web',
+                    original_amount: 450.00,
+                    original_currency: 'USDT',
+                    exchange_rate_used: 1.00,
+                    amount_usd_pivot: 450.00,
+                    tx_date: new Date(now - 5 * dayMs).toISOString().split('T')[0],
+                    created_at: now - 5 * dayMs,
+                    updated_at: now - 5 * dayMs,
+                    is_deleted: 0,
+                    sync_status: 'synced'
+                },
+                {
+                    id: generateUUID(),
+                    account_id: accBS.id,
+                    debt_id: null,
+                    type: 'EXPENSE',
+                    category: 'Alimentación',
+                    description: 'Compra Supermercado (Tasa histórica 43.20)',
+                    original_amount: 3456.00,
+                    original_currency: 'BS',
+                    exchange_rate_used: 43.20, // Tasa histórica inmutable de ese día
+                    amount_usd_pivot: 80.00,   // Exactamente $80.00 USD en ese momento
+                    tx_date: new Date(now - 3 * dayMs).toISOString().split('T')[0],
+                    created_at: now - 3 * dayMs,
+                    updated_at: now - 3 * dayMs,
+                    is_deleted: 0,
+                    sync_status: 'synced'
+                },
+                {
+                    id: generateUUID(),
+                    account_id: accUSD.id,
+                    debt_id: null,
+                    type: 'EXPENSE',
+                    category: 'Servicios',
+                    description: 'Fibra Óptica + Cloud Hosting',
+                    original_amount: 45.00,
+                    original_currency: 'USD',
+                    exchange_rate_used: 1.00,
+                    amount_usd_pivot: 45.00,
+                    tx_date: new Date(now - 1 * dayMs).toISOString().split('T')[0],
+                    created_at: now - 1 * dayMs,
+                    updated_at: now - 1 * dayMs,
+                    is_deleted: 0,
+                    sync_status: 'pending'
+                }
+            ];
+
+            await db.transactions.bulkPut(sampleTx);
+
+            const sampleDebts = [
+                {
+                    id: generateUUID(),
+                    kind: 'PAYABLE',
+                    counterparty: ' distribuidora Tech C.A.',
+                    title: 'Renovación Monitor & Periféricos',
+                    currency: 'USD',
+                    total_amount: 240.00,
+                    paid_amount: 90.00,
+                    exchange_rate_created: 1.00,
+                    due_date: new Date(now + 10 * dayMs).toISOString().split('T')[0],
+                    status: 'PARTIAL',
+                    created_at: now - 7 * dayMs,
+                    updated_at: now - 2 * dayMs,
+                    is_deleted: 0,
+                    sync_status: 'pending'
+                },
+                {
+                    id: generateUUID(),
+                    kind: 'RECEIVABLE',
+                    counterparty: 'Cliente Consultoría',
+                    title: 'Factura Soporte Mensual (BS)',
+                    currency: 'BS',
+                    total_amount: 6825.00,
+                    paid_amount: 0.00,
+                    exchange_rate_created: 45.50,
+                    due_date: new Date(now + 5 * dayMs).toISOString().split('T')[0],
+                    status: 'PENDING',
+                    created_at: now - 4 * dayMs,
+                    updated_at: now - 4 * dayMs,
+                    is_deleted: 0,
+                    sync_status: 'synced'
+                }
+            ];
+
+            await db.debts.bulkPut(sampleDebts);
+
+            await db.app_meta.put({
+                key: 'sync_config',
+                lastSyncTimestamp: now - 2 * dayMs,
+                gasWebAppUrl: '',
+                syncLogs: [
+                    { time: now - 2 * dayMs, message: 'Sincronización inicial completada (0 conflictos).' }
+                ]
+            });
+        }
+
+        async function loadStateFromIndexedDB() {
+            const storedRates = await db.exchange_rates.toArray();
+            storedRates.forEach(r => {
+                AppState.rates[r.currency] = r;
+            });
+
+            AppState.accounts = await db.accounts.toArray();
+            AppState.transactions = await db.transactions.toArray();
+            AppState.debts = await db.debts.toArray();
+
+            const meta = await db.app_meta.get('sync_config');
+            if (meta) {
+                AppState.lastSyncTimestamp = meta.lastSyncTimestamp || 0;
+                AppState.gasWebAppUrl = meta.gasWebAppUrl || '';
+                AppState.syncLogs = meta.syncLogs || [];
+            }
+        }
+
+        /**
+         * Cálculo del Saldo Nativo de una Cuenta a partir de sus Transacciones Activas
+         */
+        function calculateAccountNativeBalance(account) {
+            const initial = Number(account.initial_balance || 0);
+            const activeTx = AppState.transactions.filter(t => t.account_id === account.id && Number(t.is_deleted) === 0);
+            const delta = activeTx.reduce((acc, tx) => {
+                const amt = Number(tx.original_amount || 0);
+                return tx.type === 'INCOME' ? acc + amt : acc - amt;
+            }, 0);
+            return initial + delta;
+        }
+
+        /**
+         * 4. RENDERIZADO REACTIVO DE LA INTERFAZ DE USUARIO (UI/UX)
+         */
+        function renderAllViews() {
+            renderHeaderAndRatesPill();
+            renderDashboardView();
+            renderTransactionsView();
+            renderDebtsView();
+            renderSettingsAndAuditView();
+            lucide.createIcons();
+        }
+
+        function renderHeaderAndRatesPill() {
+            const bsRate = CurrencyEngine.getRateToUSD('BS').toFixed(2);
+            const usdtRate = CurrencyEngine.getRateToUSD('USDT').toFixed(2);
+            const eurRate = CurrencyEngine.getRateToUSD('EUR').toFixed(2);
+            document.getElementById('pill-rates-summary').textContent = `${bsRate} BS • ${usdtRate} USDT • ${eurRate} EUR`;
+
+            // Contador de cambios pendientes de sincronizar
+            const pendingCount = countPendingSyncRecords();
+            const dot = document.getElementById('pending-sync-dot');
+            if (pendingCount > 0) {
+                dot.textContent = pendingCount;
+                dot.classList.remove('hidden');
+            } else {
+                dot.classList.add('hidden');
+            }
+        }
+
+        function countPendingSyncRecords() {
+            const pAcc = AppState.accounts.filter(x => x.sync_status === 'pending').length;
+            const pTx = AppState.transactions.filter(x => x.sync_status === 'pending').length;
+            const pDebt = AppState.debts.filter(x => x.sync_status === 'pending').length;
+            return pAcc + pTx + pDebt;
+        }
+
+        function renderDashboardView() {
+            const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
+            const activeTx = AppState.transactions.filter(t => Number(t.is_deleted) === 0);
+            const activeDebts = AppState.debts.filter(d => Number(d.is_deleted) === 0);
+
+            const targetCurr = AppState.displayCurrency === 'ORIGINAL' ? 'USD' : AppState.displayCurrency;
+            document.getElementById('hero-currency-badge').textContent =
+                AppState.displayCurrency === 'ORIGINAL' ? 'Consolidado en USD' : `Vista en ${targetCurr}`;
+
+            // 1. Calcular Patrimonio Neto en USD Pivote
+            let totalNetWorthUSD = 0;
+            const byCurrencyUSD = { USD: 0, USDT: 0, BS: 0, EUR: 0 };
+
+            activeAccounts.forEach(acc => {
+                const nativeBal = calculateAccountNativeBalance(acc);
+                const usdVal = CurrencyEngine.toUSDPivot(nativeBal, acc.currency);
+                totalNetWorthUSD += usdVal;
+                byCurrencyUSD[acc.currency] = (byCurrencyUSD[acc.currency] || 0) + Math.max(0, usdVal);
+            });
+
+            const displayedNetWorth = CurrencyEngine.fromUSDPivot(totalNetWorthUSD, targetCurr);
+            document.getElementById('hero-net-worth').textContent = CurrencyEngine.format(displayedNetWorth, targetCurr);
+            document.getElementById('hero-sub-equivalent').textContent =
+                `Valor Pivote Exacto: $${totalNetWorthUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD • ${ CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalNetWorthUSD, 'BS'), 'BS') }`;
+
+            // 2. Métricas de Ingresos y Gastos (Usando el valor histórico inmutable en USD y convirtiendo a la moneda seleccionada)
+            const totalIncomeUSD = activeTx
+                .filter(t => t.type === 'INCOME')
+                .reduce((sum, t) => sum + Number(t.amount_usd_pivot || 0), 0);
+
+            const totalExpenseUSD = activeTx
+                .filter(t => t.type === 'EXPENSE')
+                .reduce((sum, t) => sum + Number(t.amount_usd_pivot || 0), 0);
+
+            const totalPayableUSD = activeDebts
+                .filter(d => d.kind === 'PAYABLE' && d.status !== 'PAID')
+                .reduce((sum, d) => {
+                    const rem = Math.max(0, Number(d.total_amount) - Number(d.paid_amount));
+                    return sum + CurrencyEngine.toUSDPivot(rem, d.currency);
+                }, 0);
+
+            document.getElementById('metric-income').textContent =
+                CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalIncomeUSD, targetCurr), targetCurr);
+            document.getElementById('metric-expense').textContent =
+                CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalExpenseUSD, targetCurr), targetCurr);
+            document.getElementById('metric-debt').textContent =
+                CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalPayableUSD, targetCurr), targetCurr);
+
+            // 3. Renderizar Tarjetas de Cuentas (Saldo Original + Equivalente Dinámico)
+            const accContainer = document.getElementById('dashboard-accounts-list');
+            const accentStyles = {
+                purple: { badge: 'bg-purple-50 text-brand-purple', border: 'border-l-4 border-l-brand-purple' },
+                blue: { badge: 'bg-blue-50 text-brand-blue', border: 'border-l-4 border-l-brand-blue' },
+                teal: { badge: 'bg-teal-50 text-brand-teal', border: 'border-l-4 border-l-brand-teal' },
+                amber: { badge: 'bg-amber-50 text-brand-amber', border: 'border-l-4 border-l-brand-amber' }
+            };
+
+            accContainer.innerHTML = activeAccounts.map(acc => {
+                const nativeBalance = calculateAccountNativeBalance(acc);
+                const usdEquivalent = CurrencyEngine.toUSDPivot(nativeBalance, acc.currency);
+                const style = accentStyles[acc.color] || accentStyles.purple;
+
+                // Determinar monto principal y secundario según el selector de moneda
+                let primaryText = CurrencyEngine.format(nativeBalance, acc.currency);
+                let secondaryText = `Equiv. Pivote: ${CurrencyEngine.format(usdEquivalent, 'USD')}`;
+
+                if (AppState.displayCurrency !== 'ORIGINAL' && AppState.displayCurrency !== acc.currency) {
+                    const converted = CurrencyEngine.fromUSDPivot(usdEquivalent, AppState.displayCurrency);
+                    primaryText = CurrencyEngine.format(converted, AppState.displayCurrency);
+                    secondaryText = `Saldo original: ${CurrencyEngine.format(nativeBalance, acc.currency)}`;
+                }
+
+                return `
+                    <div class="bg-white rounded-3xl p-4 shadow-soft border border-slate-100 ${style.border} flex items-center justify-between transition hover:shadow-md">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-2xl ${style.badge} flex items-center justify-center font-display font-bold text-xs">
+                                ${acc.currency}
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h4 class="font-display font-bold text-sm text-navy-900">${escapeHtml(acc.name)}</h4>
+                                    ${acc.sync_status === 'pending' ? '<span class="w-2 h-2 rounded-full bg-brand-amber" title="Pendiente de sincronizar"></span>' : ''}
+                                </div>
+                                <p class="text-xs text-slate-400 font-light mt-0.5">${secondaryText}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-metric font-bold text-base text-navy-900">${primaryText}</p>
+                            <button onclick="softDeleteAccount('${acc.id}')" class="text-[10px] text-slate-400 hover:text-rose-600">Archivar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 4. Barra de Distribución Multidivisa
+            const distBar = document.getElementById('currency-distribution-bar');
+            const distLegend = document.getElementById('currency-distribution-legend');
+            const totalPositiveUSD = Object.values(byCurrencyUSD).reduce((a, b) => a + b, 0) || 1;
+            const currColors = {
+                USD: { bar: 'bg-brand-purple', dot: 'bg-brand-purple', label: 'USD (Dólares)' },
+                USDT: { bar: 'bg-brand-teal', dot: 'bg-brand-teal', label: 'USDT (Tether)' },
+                BS: { bar: 'bg-brand-blue', dot: 'bg-brand-blue', label: 'BS (Bolívares)' },
+                EUR: { bar: 'bg-brand-amber', dot: 'bg-brand-amber', label: 'EUR (Euros)' }
+            };
+
+            distBar.innerHTML = Object.keys(byCurrencyUSD).map(curr => {
+                const pct = Math.round((byCurrencyUSD[curr] / totalPositiveUSD) * 100);
+                if (pct <= 0) return '';
+                return `<div class="${currColors[curr].bar} h-full transition-all" style="width: ${pct}%"></div>`;
+            }).join('');
+
+            distLegend.innerHTML = Object.keys(byCurrencyUSD).map(curr => {
+                const pct = ((byCurrencyUSD[curr] / totalPositiveUSD) * 100).toFixed(1);
+                return `
+                    <div class="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded-xl">
+                        <span class="flex items-center gap-1.5 text-slate-600 font-medium">
+                            <span class="w-2.5 h-2.5 rounded-full ${currColors[curr].dot}"></span>
+                            ${curr}
+                        </span>
+                        <span class="font-metric font-semibold text-navy-900">${pct}%</span>
+                    </div>
+                `;
+            }).join('');
+
+            // 5. Últimos 4 movimientos
+            const sortedRecent = [...activeTx].sort((a, b) => Number(b.updated_at) - Number(a.updated_at)).slice(0, 4);
+            const recentContainer = document.getElementById('dashboard-recent-tx');
+            recentContainer.innerHTML = sortedRecent.length
+                ? sortedRecent.map(tx => buildTransactionCardHTML(tx)).join('')
+                : `<div class="bg-white rounded-2xl p-6 text-center text-xs text-slate-400">No hay movimientos registrados aún.</div>`;
+        }
+
+        function buildTransactionCardHTML(tx) {
+            const acc = AppState.accounts.find(a => a.id === tx.account_id);
+            const accName = acc ? acc.name : 'Cuenta';
+            const isIncome = tx.type === 'INCOME';
+            const sign = isIncome ? '+' : '-';
+            const colorClass = isIncome ? 'text-brand-teal' : 'text-navy-900';
+            const iconBg = isIncome ? 'bg-teal-50 text-brand-teal' : 'bg-amber-50 text-brand-orange';
+            const iconName = isIncome ? 'arrow-down-left' : 'arrow-up-right';
+
+            // Mostrar monto original o equivalente según selector, pero SIEMPRE mostrar la tasa histórica inmutable
+            let mainAmountStr = `${sign} ${CurrencyEngine.format(tx.original_amount, tx.original_currency)}`;
+            if (AppState.displayCurrency !== 'ORIGINAL' && AppState.displayCurrency !== tx.original_currency) {
+                const convertedFromImmutablePivot = CurrencyEngine.fromUSDPivot(tx.amount_usd_pivot, AppState.displayCurrency);
+                mainAmountStr = `${sign} ${CurrencyEngine.format(convertedFromImmutablePivot, AppState.displayCurrency)}`;
+            }
+
+            return `
+                <div class="bg-white rounded-2xl p-3.5 shadow-card border border-slate-100 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-2xl ${iconBg} flex items-center justify-center shrink-0">
+                            <i data-lucide="${iconName}" class="w-4 h-4"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <p class="font-display font-semibold text-xs text-navy-900 truncate">${escapeHtml(tx.description)}</p>
+                                ${tx.sync_status === 'pending' ? '<span class="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0" title="Sync pendiente"></span>' : ''}
+                            </div>
+                            <p class="text-[11px] text-slate-400 truncate">${escapeHtml(tx.category)} • ${escapeHtml(accName)} • ${tx.tx_date}</p>
+                            <span class="inline-block mt-1 px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-mono text-slate-600">
+                                Orig: ${CurrencyEngine.format(tx.original_amount, tx.original_currency)} @ Tasa ${Number(tx.exchange_rate_used).toFixed(2)} = $${Number(tx.amount_usd_pivot).toFixed(2)} USD
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-metric font-bold text-xs sm:text-sm ${colorClass}">${mainAmountStr}</p>
+                        <button onclick="softDeleteTransaction('${tx.id}')" class="text-[10px] text-slate-400 hover:text-rose-600 mt-1">Eliminar</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTransactionsView() {
+            const query = (document.getElementById('tx-search-input')?.value || '').toLowerCase().trim();
+            const typeFilter = document.getElementById('tx-filter-type')?.value || 'ALL';
+
+            const filtered = AppState.transactions
+                .filter(t => Number(t.is_deleted) === 0)
+                .filter(t => typeFilter === 'ALL' || t.type === typeFilter)
+                .filter(t => !query || t.description.toLowerCase().includes(query) || t.category.toLowerCase().includes(query))
+                .sort((a, b) => Number(b.updated_at) - Number(a.updated_at));
+
+            document.getElementById('tx-count-label').textContent = `${filtered.length} registros activos`;
+            const container = document.getElementById('full-transactions-list');
+            container.innerHTML = filtered.length
+                ? filtered.map(tx => buildTransactionCardHTML(tx)).join('')
+                : `<div class="bg-white rounded-3xl p-8 text-center text-xs text-slate-400">No se encontraron transacciones con ese criterio.</div>`;
+            lucide.createIcons();
+        }
+
+        function renderDebtsView() {
+            const activeDebts = AppState.debts.filter(d => Number(d.is_deleted) === 0);
+            const targetCurr = AppState.displayCurrency === 'ORIGINAL' ? 'USD' : AppState.displayCurrency;
+
+            const payableUSD = activeDebts
+                .filter(d => d.kind === 'PAYABLE' && d.status !== 'PAID')
+                .reduce((sum, d) => sum + CurrencyEngine.toUSDPivot(Math.max(0, d.total_amount - d.paid_amount), d.currency), 0);
+
+            const receivableUSD = activeDebts
+                .filter(d => d.kind === 'RECEIVABLE' && d.status !== 'PAID')
+                .reduce((sum, d) => sum + CurrencyEngine.toUSDPivot(Math.max(0, d.total_amount - d.paid_amount), d.currency), 0);
+
+            document.getElementById('debts-total-payable').textContent =
+                CurrencyEngine.format(CurrencyEngine.fromUSDPivot(payableUSD, targetCurr), targetCurr);
+            document.getElementById('debts-total-receivable').textContent =
+                CurrencyEngine.format(CurrencyEngine.fromUSDPivot(receivableUSD, targetCurr), targetCurr);
+
+            const container = document.getElementById('debts-list-container');
+            container.innerHTML = activeDebts.length ? activeDebts.map(d => {
+                const remaining = Math.max(0, Number(d.total_amount) - Number(d.paid_amount));
+                const pct = Math.min(100, Math.round((Number(d.paid_amount) / Number(d.total_amount)) * 100));
+                const isPayable = d.kind === 'PAYABLE';
+                const badgeClass = d.status === 'PAID'
+                    ? 'bg-teal-50 text-brand-teal'
+                    : (isPayable ? 'bg-amber-50 text-brand-orange' : 'bg-blue-50 text-brand-blue');
+
+                const remainingConverted = AppState.displayCurrency !== 'ORIGINAL' && AppState.displayCurrency !== d.currency
+                    ? ` (${CurrencyEngine.format(CurrencyEngine.convert(remaining, d.currency, AppState.displayCurrency), AppState.displayCurrency)})`
+                    : '';
+
+                return `
+                    <div class="bg-white rounded-3xl p-4 shadow-soft border border-slate-100 space-y-3">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${badgeClass}">
+                                    ${isPayable ? 'CUENTA POR PAGAR' : 'CUENTA POR COBRAR'} • ${d.status}
+                                </span>
+                                <h4 class="font-display font-bold text-sm text-navy-900 mt-1">${escapeHtml(d.title)}</h4>
+                                <p class="text-xs text-slate-400">${escapeHtml(d.counterparty)} • Vence: ${d.due_date}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-metric font-bold text-sm text-navy-900">${CurrencyEngine.format(remaining, d.currency)}</p>
+                                <p class="text-[10px] text-slate-400">Pendiente${remainingConverted}</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${d.status === 'PAID' ? 'bg-brand-teal' : 'bg-brand-blue'}" style="width: ${pct}%"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                            <span>Abonado: ${CurrencyEngine.format(d.paid_amount, d.currency)} (${pct}%)</span>
+                            <div class="flex items-center gap-2">
+                                ${d.status !== 'PAID' ? `
+                                    <button onclick="openPayDebtModal('${d.id}')" class="px-3 py-1 rounded-xl bg-purple-50 text-brand-purple font-semibold hover:bg-purple-100">
+                                        Registrar Abono
+                                    </button>
+                                ` : ''}
+                                <button onclick="softDeleteDebt('${d.id}')" class="text-slate-400 hover:text-rose-600">Borrar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('') : `<div class="bg-white rounded-3xl p-8 text-center text-xs text-slate-400">No hay deudas ni cuentas por cobrar activas.</div>`;
+        }
+
+        function renderSettingsAndAuditView() {
+            const activeAcc = AppState.accounts.filter(a => Number(a.is_deleted) === 0).length;
+            const activeTx = AppState.transactions.filter(t => Number(t.is_deleted) === 0).length;
+            const softDel = AppState.accounts.filter(a => Number(a.is_deleted) === 1).length +
+                            AppState.transactions.filter(t => Number(t.is_deleted) === 1).length +
+                            AppState.debts.filter(d => Number(d.is_deleted) === 1).length;
+
+            document.getElementById('stat-db-accounts').textContent = activeAcc;
+            document.getElementById('stat-db-tx').textContent = activeTx;
+            document.getElementById('stat-db-deleted').textContent = softDel;
+
+            const logBox = document.getElementById('sync-audit-log');
+            logBox.innerHTML = AppState.syncLogs.length
+                ? AppState.syncLogs.slice().reverse().map(l => `
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-navy-800">${escapeHtml(l.message)}</span>
+                        <span class="text-[10px] font-mono text-slate-400 shrink-0 ml-2">${new Date(l.time).toLocaleTimeString()}</span>
+                    </div>
+                `).join('')
+                : `<p class="text-slate-400">Sin eventos de sincronización recientes.</p>`;
+        }
+
+        /**
+         * 5. CONTROLADORES DE FORMULARIOS Y MUTACIONES CON BORRADO LÓGICO (SOFT DELETE)
+         */
+        function handleDisplayCurrencyChange(val) {
+            AppState.displayCurrency = val;
+            renderAllViews();
+            showToast(`Moneda de visualización: ${val === 'ORIGINAL' ? 'Moneda Nativa de cada Cuenta' : val}`);
+        }
+
+        function openTransactionModal() {
+            const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
+            if (activeAccounts.length === 0) {
+                showToast('Primero crea una cuenta activa.', 'warning');
+                return;
+            }
+            const select = document.getElementById('tx-account');
+            select.innerHTML = activeAccounts.map(a =>
+                `<option value="${a.id}">${escapeHtml(a.name)} (${a.currency})</option>`
+            ).join('');
+
+            document.getElementById('tx-id').value = '';
+            document.getElementById('tx-amount').value = '';
+            document.getElementById('tx-description').value = '';
+            document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+
+            setTxType('EXPENSE');
+            handleTxAccountChange();
+            openModal('modal-transaction');
+        }
+
+        function setTxType(type) {
+            AppState.currentTxType = type;
+            const btnExp = document.getElementById('btn-type-expense');
+            const btnInc = document.getElementById('btn-type-income');
+            if (type === 'EXPENSE') {
+                btnExp.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-orange shadow-xs transition';
+                btnInc.className = 'py-2 rounded-xl font-display font-semibold text-xs text-slate-500 transition';
+            } else {
+                btnInc.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-teal shadow-xs transition';
+                btnExp.className = 'py-2 rounded-xl font-display font-semibold text-xs text-slate-500 transition';
+            }
+        }
+
+        function handleTxAccountChange() {
+            const accId = document.getElementById('tx-account').value;
+            const acc = AppState.accounts.find(a => a.id === accId);
+            if (!acc) return;
+
+            document.getElementById('tx-currency-label').textContent = acc.currency;
+            document.getElementById('tx-rate-unit-label').textContent = `${acc.currency} x 1 USD`;
+            const currentRate = CurrencyEngine.getRateToUSD(acc.currency);
+            const rateInput = document.getElementById('tx-exchange-rate');
+            rateInput.value = currentRate;
+            rateInput.readOnly = (acc.currency === 'USD');
+            recalculateTxPreview();
+        }
+
+        function recalculateTxPreview() {
+            const accId = document.getElementById('tx-account').value;
+            const acc = AppState.accounts.find(a => a.id === accId);
+            const amount = Number(document.getElementById('tx-amount').value || 0);
+            const rate = Number(document.getElementById('tx-exchange-rate').value || 1);
+            const curr = acc ? acc.currency : 'USD';
+            const pivotUSD = CurrencyEngine.toUSDPivot(amount, curr, rate);
+            document.getElementById('tx-usd-pivot-preview').textContent = `$${pivotUSD.toFixed(2)} USD`;
+        }
+
+        async function saveTransaction(e) {
+            e.preventDefault();
+            const accId = document.getElementById('tx-account').value;
+            const acc = AppState.accounts.find(a => a.id === accId);
+            if (!acc) return;
+
+            const originalAmount = Number(document.getElementById('tx-amount').value);
+            const exchangeRateUsed = Number(document.getElementById('tx-exchange-rate').value);
+            const amountUsdPivot = Number(CurrencyEngine.toUSDPivot(originalAmount, acc.currency, exchangeRateUsed).toFixed(4));
+            const now = Date.now();
+
+            const newTx = {
+                id: generateUUID(),
+                account_id: acc.id,
+                debt_id: null,
+                type: AppState.currentTxType,
+                category: document.getElementById('tx-category').value,
+                description: document.getElementById('tx-description').value.trim(),
+                original_amount: originalAmount,
+                original_currency: acc.currency,
+                exchange_rate_used: exchangeRateUsed, // Inmutable en el registro histórico
+                amount_usd_pivot: amountUsdPivot,     // Inmutable en el registro histórico
+                tx_date: document.getElementById('tx-date').value,
+                created_at: now,
+                updated_at: now,
+                is_deleted: 0,
+                sync_status: 'pending'
+            };
+
+            AppState.transactions.push(newTx);
+            try { await db.transactions.put(newTx); } catch (_) {}
+
+            closeModal('modal-transaction');
+            renderAllViews();
+            showToast('Transacción guardada con tasa histórica inmutable.');
+        }
+
+        async function saveAccount(e) {
+            e.preventDefault();
+            const now = Date.now();
+            const newAcc = {
+                id: generateUUID(),
+                name: document.getElementById('acc-name').value.trim(),
+                currency: document.getElementById('acc-currency').value,
+                initial_balance: Number(document.getElementById('acc-initial').value || 0),
+                color: document.getElementById('acc-color').value,
+                icon: 'wallet',
+                created_at: now,
+                updated_at: now,
+                is_deleted: 0,
+                sync_status: 'pending'
+            };
+
+            AppState.accounts.push(newAcc);
+            try { await db.accounts.put(newAcc); } catch (_) {}
+
+            document.getElementById('acc-name').value = '';
+            closeModal('modal-account');
+            renderAllViews();
+            showToast(`Cuenta ${newAcc.name} (${newAcc.currency}) creada.`);
+        }
+
+        function setDebtKind(kind) {
+            AppState.currentDebtKind = kind;
+            const btnPay = document.getElementById('btn-debt-payable');
+            const btnRec = document.getElementById('btn-debt-receivable');
+            if (kind === 'PAYABLE') {
+                btnPay.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-amber shadow-xs';
+                btnRec.className = 'py-2 rounded-xl font-display font-semibold text-xs text-slate-500';
+            } else {
+                btnRec.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-teal shadow-xs';
+                btnPay.className = 'py-2 rounded-xl font-display font-semibold text-xs text-slate-500';
+            }
+        }
+
+        async function saveDebt(e) {
+            e.preventDefault();
+            const now = Date.now();
+            const curr = document.getElementById('debt-currency').value;
+            const newDebt = {
+                id: generateUUID(),
+                kind: AppState.currentDebtKind,
+                counterparty: document.getElementById('debt-counterparty').value.trim(),
+                title: document.getElementById('debt-title').value.trim(),
+                currency: curr,
+                total_amount: Number(document.getElementById('debt-total').value),
+                paid_amount: 0,
+                exchange_rate_created: CurrencyEngine.getRateToUSD(curr),
+                due_date: document.getElementById('debt-due').value,
+                status: 'PENDING',
+                created_at: now,
+                updated_at: now,
+                is_deleted: 0,
+                sync_status: 'pending'
+            };
+
+            AppState.debts.push(newDebt);
+            try { await db.debts.put(newDebt); } catch (_) {}
+
+            closeModal('modal-debt');
+            renderAllViews();
+            showToast('Obligación registrada localmente.');
+        }
+
+        function openPayDebtModal(debtId) {
+            const debt = AppState.debts.find(d => d.id === debtId);
+            if (!debt) return;
+
+            const remaining = Math.max(0, Number(debt.total_amount) - Number(debt.paid_amount));
+            document.getElementById('pay-debt-id').value = debt.id;
+            document.getElementById('pay-debt-summary-title').textContent = `${debt.title} (${debt.counterparty})`;
+            document.getElementById('pay-debt-summary-remaining').textContent = `Saldo pendiente: ${CurrencyEngine.format(remaining, debt.currency)}`;
+            document.getElementById('pay-debt-curr-span').textContent = debt.currency;
+            document.getElementById('pay-debt-amount').value = remaining.toFixed(2);
+            document.getElementById('pay-debt-rate').value = CurrencyEngine.getRateToUSD(debt.currency);
+
+            const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
+            const accSelect = document.getElementById('pay-debt-account');
+            accSelect.innerHTML = activeAccounts.map(a =>
+                `<option value="${a.id}" ${a.currency === debt.currency ? 'selected' : ''}>${escapeHtml(a.name)} (${a.currency})</option>`
+            ).join('');
+
+            openModal('modal-pay-debt');
+        }
+
+        async function submitDebtPayment(e) {
+            e.preventDefault();
+            const debtId = document.getElementById('pay-debt-id').value;
+            const debt = AppState.debts.find(d => d.id === debtId);
+            const accId = document.getElementById('pay-debt-account').value;
+            const acc = AppState.accounts.find(a => a.id === accId);
+            if (!debt || !acc) return;
+
+            const payAmountInDebtCurr = Number(document.getElementById('pay-debt-amount').value);
+            const rateUsed = Number(document.getElementById('pay-debt-rate').value);
+            const now = Date.now();
+
+            // Actualizar estado de la deuda
+            debt.paid_amount = Number(debt.paid_amount) + payAmountInDebtCurr;
+            debt.status = debt.paid_amount >= debt.total_amount ? 'PAID' : 'PARTIAL';
+            debt.updated_at = now;
+            debt.sync_status = 'pending';
+
+            // Calcular monto equivalente descontado/abonado en la cuenta seleccionada
+            const usdPivot = CurrencyEngine.toUSDPivot(payAmountInDebtCurr, debt.currency, rateUsed);
+            const accountRate = CurrencyEngine.getRateToUSD(acc.currency);
+            const amountInAccountCurr = Number(CurrencyEngine.fromUSDPivot(usdPivot, acc.currency).toFixed(2));
+
+            const linkedTx = {
+                id: generateUUID(),
+                account_id: acc.id,
+                debt_id: debt.id,
+                type: debt.kind === 'PAYABLE' ? 'EXPENSE' : 'INCOME',
+                category: 'Abono Deuda',
+                description: `Abono: ${debt.title} (${debt.counterparty})`,
+                original_amount: amountInAccountCurr,
+                original_currency: acc.currency,
+                exchange_rate_used: accountRate,
+                amount_usd_pivot: Number(usdPivot.toFixed(4)),
+                tx_date: new Date().toISOString().split('T')[0],
+                created_at: now,
+                updated_at: now,
+                is_deleted: 0,
+                sync_status: 'pending'
+            };
+
+            AppState.transactions.push(linkedTx);
+            try {
+                await db.debts.put(debt);
+                await db.transactions.put(linkedTx);
+            } catch (_) {}
+
+            closeModal('modal-pay-debt');
+            renderAllViews();
+            showToast('Abono registrado y saldo de cuenta actualizado.');
+        }
+
+        // Borrado Lógico (Soft Delete) con marca de tiempo updated_at
+        async function softDeleteTransaction(txId) {
+            const tx = AppState.transactions.find(t => t.id === txId);
+            if (!tx) return;
+            tx.is_deleted = 1;
+            tx.updated_at = Date.now();
+            tx.sync_status = 'pending';
+            try { await db.transactions.put(tx); } catch (_) {}
+            renderAllViews();
+            showToast('Registro marcado con borrado lógico (is_deleted = 1).');
+        }
+
+        async function softDeleteAccount(accId) {
+            const acc = AppState.accounts.find(a => a.id === accId);
+            if (!acc) return;
+            acc.is_deleted = 1;
+            acc.updated_at = Date.now();
+            acc.sync_status = 'pending';
+            try { await db.accounts.put(acc); } catch (_) {}
+            renderAllViews();
+            showToast('Cuenta archivada con borrado lógico.');
+        }
+
+        async function softDeleteDebt(debtId) {
+            const debt = AppState.debts.find(d => d.id === debtId);
+            if (!debt) return;
+            debt.is_deleted = 1;
+            debt.updated_at = Date.now();
+            debt.sync_status = 'pending';
+            try { await db.debts.put(debt); } catch (_) {}
+            renderAllViews();
+            showToast('Obligación eliminada lógicamente.');
+        }
+
+        async function saveExchangeRates(e) {
+            e.preventDefault();
+            const now = Date.now();
+            ['BS', 'USDT', 'EUR'].forEach(curr => {
+                const val = Number(document.getElementById(`rate-input-${curr}`).value);
+                if (val > 0) {
+                    AppState.rates[curr].rate_to_usd = val;
+                    AppState.rates[curr].updated_at = now;
+                    AppState.rates[curr].sync_status = 'pending';
+                }
+            });
+
+            try {
+                await db.exchange_rates.bulkPut(Object.values(AppState.rates));
+            } catch (_) {}
+
+            closeModal('modal-rates');
+            renderAllViews();
+            showToast('Tasas de cambio actualizadas (los registros pasados conservan su tasa histórica).');
+        }
+
+        /**
+         * 6. MOTOR DE SINCRONIZACIÓN BIDIRECCIONAL CON GOOGLE SHEETS (LWW + UUID)
+         */
+        async function triggerBidirectionalSync() {
+            const btn = document.getElementById('btn-execute-sync');
+            const icon = document.getElementById('sync-icon');
+            const urlInput = document.getElementById('gas-endpoint-input').value.trim();
+            AppState.gasWebAppUrl = urlInput;
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+
+            const pendingPayload = {
+                last_sync_at: AppState.lastSyncTimestamp,
+                changes: {
+                    accounts: AppState.accounts.filter(a => a.sync_status === 'pending'),
+                    transactions: AppState.transactions.filter(t => t.sync_status === 'pending'),
+                    debts: AppState.debts.filter(d => d.sync_status === 'pending'),
+                    exchange_rates: Object.values(AppState.rates).filter(r => r.sync_status === 'pending')
+                }
+            };
+
+            const totalPushed =
+                pendingPayload.changes.accounts.length +
+                pendingPayload.changes.transactions.length +
+                pendingPayload.changes.debts.length +
+                pendingPayload.changes.exchange_rates.length;
+
+            try {
+                if (urlInput && urlInput.startsWith('https://script.google.com')) {
+                    // Sincronización Real contra Google Apps Script usando text/plain para evitar bloqueo CORS preflight
+                    const response = await fetch(urlInput, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(pendingPayload)
+                    });
+                    const data = await response.json();
+                    if (data.status !== 'ok') throw new Error(data.message || 'Error en respuesta de GAS');
+
+                    // Aplicar PULL remoto resolviendo conflictos por updated_at
+                    await applyServerPullChanges(data.changes || {});
+                    await markAllLocalAsSynced(data.server_timestamp || Date.now());
+                    logSyncEvent(`Sync Google Sheets OK (${totalPushed} enviados, LWW aplicado).`);
+                    showToast('Sincronización bidireccional con Google Sheets completada.');
+                } else {
+                    // Simulación Local del Protocolo LWW para pruebas sin backend configurado
+                    await new Promise(r => setTimeout(r, 700));
+                    await markAllLocalAsSynced(Date.now());
+                    logSyncEvent(`Simulación Sync LWW completada (${totalPushed} UUIDs marcados como synced).`);
+                    showToast(`Sincronización completada (${totalPushed} registros sincronizados).`);
+                }
+                closeModal('modal-sync');
+            } catch (err) {
+                logSyncEvent(`Error de red/CORS: los cambios siguen seguros en IndexedDB (${err.message}).`);
+                showToast('Sin conexión al endpoint GAS; cambios resguardados en cola local.', 'warning');
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+                renderAllViews();
+            }
+        }
+
+        async function applyServerPullChanges(serverChanges) {
+            const mergeCollection = (localArr, incomingArr) => {
+                const map = new Map(localArr.map(item => [item.id, item]));
+                (incomingArr || []).forEach(remote => {
+                    const existing = map.get(remote.id);
+                    // Resolución de conflictos Last-Write-Wins (updated_at)
+                    if (!existing || Number(remote.updated_at) > Number(existing.updated_at)) {
+                        map.set(remote.id, { ...remote, sync_status: 'synced' });
+                    }
+                });
+                return Array.from(map.values());
+            };
+
+            if (serverChanges.accounts) {
+                AppState.accounts = mergeCollection(AppState.accounts, serverChanges.accounts);
+                try { await db.accounts.bulkPut(AppState.accounts); } catch (_) {}
+            }
+            if (serverChanges.transactions) {
+                AppState.transactions = mergeCollection(AppState.transactions, serverChanges.transactions);
+                try { await db.transactions.bulkPut(AppState.transactions); } catch (_) {}
+            }
+            if (serverChanges.debts) {
+                AppState.debts = mergeCollection(AppState.debts, serverChanges.debts);
+                try { await db.debts.bulkPut(AppState.debts); } catch (_) {}
+            }
+        }
+
+        async function markAllLocalAsSynced(timestamp) {
+            AppState.accounts.forEach(a => a.sync_status = 'synced');
+            AppState.transactions.forEach(t => t.sync_status = 'synced');
+            AppState.debts.forEach(d => d.sync_status = 'synced');
+            Object.values(AppState.rates).forEach(r => r.sync_status = 'synced');
+            AppState.lastSyncTimestamp = timestamp;
+
+            try {
+                await db.accounts.bulkPut(AppState.accounts);
+                await db.transactions.bulkPut(AppState.transactions);
+                await db.debts.bulkPut(AppState.debts);
+                await db.app_meta.put({
+                    key: 'sync_config',
+                    lastSyncTimestamp: AppState.lastSyncTimestamp,
+                    gasWebAppUrl: AppState.gasWebAppUrl,
+                    syncLogs: AppState.syncLogs
+                });
+            } catch (_) {}
+        }
+
+        function logSyncEvent(message) {
+            AppState.syncLogs.push({ time: Date.now(), message });
+            if (AppState.syncLogs.length > 25) AppState.syncLogs.shift();
+        }
+
+        /**
+         * 7. PURGA DE RETENCIÓN LOCAL (LÍMITE ESTRICTO DE 2 AÑOS)
+         */
+        async function runLocalRetentionPurge() {
+            const twoYearsMs = 2 * 365 * 24 * 60 * 60 * 1000;
+            const cutoff = Date.now() - twoYearsMs;
+
+            const beforeCount = AppState.transactions.length;
+            AppState.transactions = AppState.transactions.filter(t => {
+                const txTime = t.tx_date ? new Date(t.tx_date).getTime() : Number(t.created_at);
+                return txTime >= cutoff;
+            });
+            const removed = beforeCount - AppState.transactions.length;
+
+            try {
+                await db.transactions.clear();
+                await db.transactions.bulkPut(AppState.transactions);
+            } catch (_) {}
+
+            logSyncEvent(`Purga de retención (2 años) ejecutada: ${removed} registros antiguos depurados.`);
+            renderAllViews();
+            showToast(`Purga de 2 años completada (${removed} registros antiguos eliminados).`);
+        }
+
+        async function resetDemoDatabase() {
+            try {
+                await db.delete();
+                await db.open();
+                await seedInitialData();
+                await loadStateFromIndexedDB();
+            } catch (_) {
+                await seedInMemoryFallback();
+            }
+            renderAllViews();
+            showToast('Datos semilla de demostración restaurados.');
+        }
+
+        async function seedInMemoryFallback() {
+            AppState.accounts = [];
+            AppState.transactions = [];
+            AppState.debts = [];
+            await seedInitialData().catch(() => {});
+        }
+
+        /**
+         * 8. NAVEGACIÓN ENTRE PESTAÑAS, MODALES Y PORTAPAPELES
+         */
+        function switchWorkspace(ws) {
+            const pwa = document.getElementById('workspace-pwa');
+            const docs = document.getElementById('workspace-docs');
+            const btnPwa = document.getElementById('btn-ws-pwa');
+            const btnDocs = document.getElementById('btn-ws-docs');
+
+            if (ws === 'pwa') {
+                pwa.classList.remove('hidden');
+                docs.classList.add('hidden');
+                btnPwa.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm';
+                btnDocs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900';
+            } else {
+                pwa.classList.add('hidden');
+                docs.classList.remove('hidden');
+                btnDocs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm';
+                btnPwa.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900';
+            }
+            lucide.createIcons();
+        }
+
+        function switchPwaTab(tab) {
+            const views = ['dashboard', 'transactions', 'debts', 'settings'];
+            const titles = {
+                dashboard: 'Resumen Financiero',
+                transactions: 'Historial de Movimientos',
+                debts: 'Cuentas por Pagar y Cobrar',
+                settings: 'Sincronización & Tasas'
+            };
+
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.toggle('hidden', v !== tab);
+                const navBtn = document.getElementById(`nav-tab-${v}`);
+                if (v === tab) {
+                    navBtn.className = 'flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-brand-purple font-semibold';
+                } else {
+                    navBtn.className = 'flex flex-col items-center gap-1 py-1 px-3 rounded-2xl text-slate-400 hover:text-navy-900 font-medium';
+                }
+            });
+
+            document.getElementById('mobile-header-title').textContent = titles[tab];
+            renderAllViews();
+        }
+
+        function switchDocSection(sec) {
+            const sections = ['arch', 'gas', 'pwa-files', 'deploy'];
+            sections.forEach(s => {
+                document.getElementById(`doc-sec-${s}`).classList.toggle('hidden', s !== sec);
+                const btn = document.getElementById(`doc-btn-${s}`);
+                btn.className = s === sec
+                    ? 'px-4 py-2 rounded-xl text-xs font-semibold bg-navy-900 text-white'
+                    : 'px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-navy-800 hover:bg-slate-200';
+            });
+        }
+
+        function openModal(id) {
+            if (id === 'modal-rates') {
+                document.getElementById('rate-input-BS').value = CurrencyEngine.getRateToUSD('BS');
+                document.getElementById('rate-input-USDT').value = CurrencyEngine.getRateToUSD('USDT');
+                document.getElementById('rate-input-EUR').value = CurrencyEngine.getRateToUSD('EUR');
+            }
+            if (id === 'modal-sync') {
+                document.getElementById('gas-endpoint-input').value = AppState.gasWebAppUrl || '';
+                document.getElementById('sync-modal-pending-count').textContent = `${countPendingSyncRecords()} registros`;
+                document.getElementById('sync-modal-last-time').textContent =
+                    AppState.lastSyncTimestamp ? new Date(AppState.lastSyncTimestamp).toLocaleString() : 'Nunca';
+            }
+            if (id === 'modal-debt') {
+                document.getElementById('debt-due').value = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+            }
+            document.getElementById(id).classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function copyCodeBlock(elementId, label) {
+            const text = document.getElementById(elementId).innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast(`Código de ${label} copiado al portapapeles.`);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'warning' ? 'bg-brand-orange' : 'bg-navy-900';
+            toast.className = `${bg} text-white px-4 py-2.5 rounded-2xl shadow-lg text-xs font-medium flex items-center gap-2 animate-slide-up`;
+            toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3200);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        /**
+         * 9. DETECCIÓN DE RED Y REGISTRO DE SERVICE WORKER PARA MODO OFFLINE
+         */
+        function updateNetworkIndicator() {
+            const badge = document.getElementById('network-badge');
+            if (navigator.onLine) {
+                badge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 text-brand-teal border border-teal-200';
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-brand-teal animate-pulse"></span> Online';
+            } else {
+                badge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-brand-orange border border-amber-200';
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-brand-orange"></span> Offline (Local DB)';
+            }
+        }
+
+        window.addEventListener('online', () => {
+            updateNetworkIndicator();
+            showToast('Conexión restablecida. Puedes sincronizar con Google Sheets.');
+        });
+        window.addEventListener('offline', () => {
+            updateNetworkIndicator();
+            showToast('Modo Offline activo: operando sobre IndexedDB local.', 'warning');
+        });
+
+        function registerInlineServiceWorker() {
+            if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+                navigator.serviceWorker.register('./sw.js').catch(() => {});
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateNetworkIndicator();
+            initDatabaseAndSeed();
+        });
+    </script>
+</body>
+</html>
