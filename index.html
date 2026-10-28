@@ -38,18 +38,23 @@
                             900: '#0F172A'
                         },
                         brand: {
-                            purple: '#6D28D9',
-                            blue: '#1D4ED8',
+                            sail: '#25589B',
+                            sailDark: '#1B4275',
+                            poppy: '#F08A4B',
+                            poppyDark: '#D97234',
+                            purple: '#25589B',
+                            blue: '#25589B',
                             teal: '#0D9488',
-                            amber: '#F59E0B',
-                            orange: '#EA580C'
+                            amber: '#F08A4B',
+                            orange: '#F08A4B'
                         }
                     },
                     boxShadow: {
                         'soft': '0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03)',
                         'card': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
-                        'glow-purple': '0 14px 28px -6px rgba(109, 40, 217, 0.38)',
-                        'glow-blue': '0 10px 24px -4px rgba(29, 78, 216, 0.3)'
+                        'glow-purple': '0 14px 28px -6px rgba(37, 88, 155, 0.38)',
+                        'glow-blue': '0 10px 24px -4px rgba(37, 88, 155, 0.32)',
+                        'glow-poppy': '0 12px 26px -5px rgba(240, 138, 75, 0.42)'
                     }
                 }
             }
@@ -57,7 +62,7 @@
     </script>
 
     <style>
-        /* Estilos Base y Paleta Visual Solicitada */
+        /* Estilos Base y Paleta Visual: Set Sail (#25589B) & Iceland Poppy (#F08A4B) */
         body {
             background-color: #F4F6F9;
             color: #0F172A;
@@ -71,13 +76,17 @@
             letter-spacing: -0.02em;
         }
 
-        /* Degradados de acento especificados en los requerimientos */
+        /* Degradados corporativos con Set Sail (#25589B) e Iceland Poppy (#F08A4B) */
         .bg-purple-gradient {
-            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #9333EA 100%);
+            background: linear-gradient(135deg, #1B4275 0%, #25589B 60%, #316CB8 100%);
         }
 
         .bg-blue-gradient {
-            background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%);
+            background: linear-gradient(135deg, #1B4275 0%, #25589B 100%);
+        }
+
+        .bg-poppy-gradient {
+            background: linear-gradient(135deg, #F08A4B 0%, #E0702B 100%);
         }
 
         .bg-teal-gradient {
@@ -85,7 +94,7 @@
         }
 
         .bg-amber-gradient {
-            background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+            background: linear-gradient(135deg, #D97234 0%, #F08A4B 100%);
         }
 
         /* Scrollbars ocultos para contenedores táctiles */
@@ -122,13 +131,25 @@
 <body class="min-h-screen flex flex-col">
 
     <!-- ===================================================================== -->
-    <!-- BARRA SUPERIOR DE MODO: SIMULADOR MÓVIL PWA vs. ARQUITECTURA & CÓDIGO -->
+    <!-- BARRA SUPERIOR CON LOGO ADJUNTO Y ACCESO OCULTO (PIN 3312)            -->
     <!-- ===================================================================== -->
     <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
             <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-purple-gradient flex items-center justify-center text-white shadow-glow-purple">
-                    <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+                <!-- Logo Oficial Adjunto (Set Sail #25589B & Iceland Poppy #F08A4B) -->
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shadow-card p-1.5">
+                    <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Conectores Set Sail (#25589B) -->
+                        <line x1="50" y1="52" x2="50" y2="16" stroke="#25589B" stroke-width="11" stroke-linecap="round"/>
+                        <line x1="50" y1="52" x2="17" y2="74" stroke="#25589B" stroke-width="11" stroke-linecap="round"/>
+                        <line x1="50" y1="52" x2="83" y2="74" stroke="#25589B" stroke-width="11" stroke-linecap="round"/>
+                        <!-- Nodos Exteriores Set Sail (#25589B) -->
+                        <circle cx="50" cy="16" r="13" fill="#25589B"/>
+                        <circle cx="17" cy="74" r="13" fill="#25589B"/>
+                        <circle cx="83" cy="74" r="13" fill="#25589B"/>
+                        <!-- Nodo Central Iceland Poppy (#F08A4B) -->
+                        <circle cx="50" cy="52" r="19" fill="#F08A4B"/>
+                    </svg>
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
@@ -138,19 +159,18 @@
                             Online
                         </span>
                     </div>
-                    <p class="text-[11px] text-slate-500 hidden sm:block">Offline-First • IndexedDB (Dexie) • Sync Bidireccional Google Sheets</p>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Gestión Multidivisa Offline-First</p>
                 </div>
             </div>
 
-            <!-- Selector de Vista Principal: App Móvil vs Documentación de Ingeniería -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/70">
-                <button onclick="switchWorkspace('pwa')" id="btn-ws-pwa" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm">
-                    <i data-lucide="smartphone" class="w-3.5 h-3.5 text-brand-purple"></i>
-                    <span>App Móvil (PWA)</span>
+            <!-- Controles discretos: Botón para volver a la App (si está en docs) + Candado PIN 3312 -->
+            <div class="flex items-center gap-2">
+                <button onclick="switchWorkspace('pwa')" id="btn-back-to-pwa" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-sail text-white shadow-sm hover:opacity-95 transition">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                    <span>Volver a la App</span>
                 </button>
-                <button onclick="switchWorkspace('docs')" id="btn-ws-docs" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900">
-                    <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-brand-blue"></i>
-                    <span>Arquitectura, GAS & Despliegue</span>
+                <button onclick="handleSecretAccessClick()" title="Acceso Técnico" class="w-8 h-8 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 text-slate-400 hover:text-brand-sail flex items-center justify-center transition">
+                    <i data-lucide="lock" id="secret-lock-icon" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
         </div>
@@ -194,9 +214,9 @@
 
             <!-- PÍLDORA RÁPIDA DE TASAS DE CAMBIO (PIVOTE USD) -->
             <div class="px-5 mb-3">
-                <div onclick="openModal('modal-rates')" class="bg-white rounded-2xl px-3.5 py-2.5 shadow-card border border-slate-100 flex items-center justify-between cursor-pointer hover:border-purple-200 transition">
+                <div onclick="openModal('modal-rates')" class="bg-white rounded-2xl px-3.5 py-2.5 shadow-card border border-slate-100 flex items-center justify-between cursor-pointer hover:border-brand-sail/40 transition">
                     <div class="flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-lg bg-amber-50 text-brand-amber flex items-center justify-center">
+                        <span class="w-7 h-7 rounded-lg bg-orange-50 text-brand-poppy flex items-center justify-center">
                             <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
                         </span>
                         <div class="text-xs">
@@ -204,7 +224,7 @@
                             <span id="pill-rates-summary" class="font-display font-semibold text-navy-900">45.50 BS • 1.00 USDT</span>
                         </div>
                     </div>
-                    <span class="text-[11px] font-medium text-brand-purple bg-purple-50 px-2.5 py-1 rounded-lg">Ajustar tasa</span>
+                    <span class="text-[11px] font-semibold text-brand-sail bg-blue-50 px-2.5 py-1 rounded-lg">Tasas / Web</span>
                 </div>
             </div>
 
@@ -216,18 +236,18 @@
 
                     <!-- Tarjeta Hero: Patrimonio Neto Consolidado -->
                     <div class="bg-purple-gradient rounded-3xl p-6 text-white shadow-glow-purple relative overflow-hidden">
-                        <div class="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
-                        <div class="absolute -left-6 -bottom-10 w-28 h-28 rounded-full bg-indigo-900/20 blur-lg pointer-events-none"></div>
+                        <div class="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-brand-poppy/25 blur-xl pointer-events-none"></div>
+                        <div class="absolute -left-6 -bottom-10 w-28 h-28 rounded-full bg-navy-900/20 blur-lg pointer-events-none"></div>
 
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-normal text-purple-100 uppercase tracking-wider">Patrimonio Consolidado</span>
+                            <span class="text-xs font-normal text-blue-100 uppercase tracking-wider">Patrimonio Consolidado</span>
                             <span id="hero-currency-badge" class="text-[11px] font-semibold bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full">Base USD</span>
                         </div>
 
                         <div class="font-metric font-bold text-3xl sm:text-4xl tracking-tight my-1" id="hero-net-worth">
                             $0.00
                         </div>
-                        <p class="text-xs text-purple-100/90 font-light" id="hero-sub-equivalent">
+                        <p class="text-xs text-blue-100/90 font-light" id="hero-sub-equivalent">
                             Equivalente pivote: $0.00 USD
                         </p>
 
@@ -421,9 +441,9 @@
 
             </div>
 
-            <!-- BOTÓN FLOTANTE (FAB) PARA NUEVA TRANSACCIÓN -->
+            <!-- BOTÓN FLOTANTE (FAB) PARA NUEVA TRANSACCIÓN (ICELAND POPPY #F08A4B) -->
             <button onclick="openTransactionModal()" title="Registrar Transacción"
-                class="absolute bottom-20 right-5 z-20 w-14 h-14 rounded-2xl bg-purple-gradient text-white shadow-glow-purple flex items-center justify-center hover:scale-105 active:scale-95 transition">
+                class="absolute bottom-20 right-5 z-20 w-14 h-14 rounded-2xl bg-poppy-gradient text-white shadow-glow-poppy flex items-center justify-center hover:scale-105 active:scale-95 transition">
                 <i data-lucide="plus" class="w-7 h-7"></i>
             </button>
 
@@ -1047,17 +1067,17 @@ self.addEventListener('fetch', event => {
                     </select>
                 </div>
 
-                <!-- Monto Original y Tasa Histórica Inmutable -->
+                <!-- Monto Original y Tasa Histórica Inmutable (Con auto-formato 1,000.00) -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Monto (<span id="tx-currency-label">USD</span>)</label>
-                        <input type="number" step="0.01" min="0.01" id="tx-amount" oninput="recalculateTxPreview()" required placeholder="0.00"
+                        <input type="text" inputmode="decimal" id="tx-amount" oninput="formatCurrencyInputLive(this); recalculateTxPreview()" onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()" required placeholder="0.00"
                             class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Tasa (<span id="tx-rate-unit-label">x 1 USD</span>)</label>
-                        <input type="number" step="0.0001" min="0.0001" id="tx-exchange-rate" oninput="recalculateTxPreview()" required
-                            class="w-full bg-amber-50/60 border border-amber-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-amber">
+                        <input type="text" inputmode="decimal" id="tx-exchange-rate" oninput="formatCurrencyInputLive(this); recalculateTxPreview()" onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()" required placeholder="1.00"
+                            class="w-full bg-orange-50/60 border border-orange-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-poppy">
                     </div>
                 </div>
 
@@ -1133,20 +1153,20 @@ self.addEventListener('fetch', event => {
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Saldo Inicial</label>
-                        <input type="number" step="0.01" id="acc-initial" value="0.00" required
+                        <input type="text" inputmode="decimal" id="acc-initial" value="0.00" oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required
                             class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">Estilo de Acento</label>
                     <select id="acc-color" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
-                        <option value="purple">Morado Degradado</option>
-                        <option value="blue">Azul Intenso</option>
+                        <option value="purple">Set Sail (#25589B)</option>
+                        <option value="amber">Iceland Poppy (#F08A4B)</option>
                         <option value="teal">Verde Cerceta (Teal)</option>
-                        <option value="amber">Naranja / Ámbar</option>
+                        <option value="blue">Azul Marino</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full py-3 rounded-2xl bg-navy-900 text-white font-display font-semibold text-xs">
+                <button type="submit" class="w-full py-3 rounded-2xl bg-brand-sail text-white font-display font-semibold text-xs shadow-glow-blue">
                     Crear Cuenta
                 </button>
             </form>
@@ -1193,7 +1213,7 @@ self.addEventListener('fetch', event => {
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Monto Total</label>
-                        <input type="number" step="0.01" min="0.01" id="debt-total" required placeholder="0.00"
+                        <input type="text" inputmode="decimal" id="debt-total" oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required placeholder="0.00"
                             class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 font-metric font-semibold text-xs text-navy-900">
                     </div>
                     <div>
@@ -1231,13 +1251,13 @@ self.addEventListener('fetch', event => {
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Monto a Abonar (<span id="pay-debt-curr-span">USD</span>)</label>
-                        <input type="number" step="0.01" min="0.01" id="pay-debt-amount" required
+                        <input type="text" inputmode="decimal" id="pay-debt-amount" oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required
                             class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-xs text-navy-900">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Tasa del Momento (vs USD)</label>
-                        <input type="number" step="0.0001" min="0.0001" id="pay-debt-rate" required
-                            class="w-full bg-amber-50/70 border border-amber-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
+                        <input type="text" inputmode="decimal" id="pay-debt-rate" oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required
+                            class="w-full bg-orange-50/70 border border-orange-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
                     </div>
                 </div>
                 <button type="submit" class="w-full py-3 rounded-2xl bg-brand-teal text-white font-display font-semibold text-xs">
@@ -1247,49 +1267,103 @@ self.addEventListener('fetch', event => {
         </div>
     </div>
 
-    <!-- MODAL 5: CONFIGURAR TASAS DE CAMBIO MANUALES (PIVOTE USD) -->
+    <!-- MODAL 5: CONFIGURAR TASAS DE CAMBIO MANUALES Y POR INTERNET (PIVOTE USD) -->
     <div id="modal-rates" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+        <div class="bg-white w-full max-w-[430px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="font-display font-bold text-base text-navy-900">Tasas de Cambio Manuales</h3>
+                    <h3 class="font-display font-bold text-base text-navy-900">Tasas de Cambio</h3>
                     <p class="text-xs text-slate-400">Moneda Pivote Base: <strong>1.00 USD ($)</strong></p>
                 </div>
                 <button onclick="closeModal('modal-rates')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <p class="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
-                Modificar estas tasas actualizará las equivalencias de visualización de saldos y servirá como valor predeterminado para nuevos movimientos, <strong>sin alterar las tasas históricas ya guardadas</strong> en transacciones pasadas.
+
+            <!-- Sincronización Automática de Tasas por Internet -->
+            <div class="bg-blue-50/70 border border-brand-sail/20 rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-display font-bold text-brand-sail flex items-center gap-1.5">
+                        <i data-lucide="globe" class="w-4 h-4 text-brand-poppy"></i>
+                        Sincronizar Tasas por Internet
+                    </span>
+                    <span id="online-rates-status" class="text-[10px] font-medium text-slate-500">En vivo</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="fetchRatesFromInternet('oficial')" id="btn-fetch-bcv"
+                        class="py-2 px-3 rounded-xl bg-white hover:bg-brand-sail hover:text-white text-brand-sail border border-brand-sail/20 font-display font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-2xs transition">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>Usar Tasa BCV</span>
+                    </button>
+                    <button type="button" onclick="fetchRatesFromInternet('paralelo')" id="btn-fetch-paralelo"
+                        class="py-2 px-3 rounded-xl bg-white hover:bg-brand-poppy hover:text-white text-brand-poppyDark border border-brand-poppy/30 font-display font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-2xs transition">
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                        <span>Usar Paralelo / USDT</span>
+                    </button>
+                </div>
+                <p id="online-rates-preview" class="text-[11px] text-slate-500 hidden"></p>
+            </div>
+
+            <p class="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                Puedes escribir cualquier valor (ej. <code>1,000.00</code>) o sincronizar con internet. Los movimientos anteriores <strong>conservan su tasa histórica inmutable</strong>.
             </p>
+
             <form onsubmit="saveExchangeRates(event)" class="space-y-3">
                 <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
                     <div>
                         <span class="font-display font-bold text-xs text-navy-900">BS (Bolívares)</span>
                         <p class="text-[11px] text-slate-400">Unidades de BS por 1 USD</p>
                     </div>
-                    <input type="number" step="0.01" min="0.0001" id="rate-input-BS" required
-                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                    <input type="text" inputmode="decimal" id="rate-input-BS"
+                        oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required placeholder="1,000.00"
+                        class="w-36 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
                 </div>
                 <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
                     <div>
                         <span class="font-display font-bold text-xs text-navy-900">USDT (Tether)</span>
                         <p class="text-[11px] text-slate-400">Unidades de USDT por 1 USD</p>
                     </div>
-                    <input type="number" step="0.001" min="0.0001" id="rate-input-USDT" required
-                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                    <input type="text" inputmode="decimal" id="rate-input-USDT"
+                        oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required placeholder="1.00"
+                        class="w-36 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
                 </div>
                 <div class="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
                     <div>
                         <span class="font-display font-bold text-xs text-navy-900">EUR (Euro)</span>
                         <p class="text-[11px] text-slate-400">Unidades de EUR por 1 USD</p>
                     </div>
-                    <input type="number" step="0.001" min="0.0001" id="rate-input-EUR" required
-                        class="w-28 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900">
+                    <input type="text" inputmode="decimal" id="rate-input-EUR"
+                        oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required placeholder="0.92"
+                        class="w-36 text-right bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
                 </div>
-                <button type="submit" class="w-full py-3 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple">
-                    Actualizar Tasas Activas
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple">
+                    Guardar Tasas Activas
                 </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 7: ACCESO PROTEGIDO POR CONTRASEÑA DE 4 DÍGITOS (3312) -->
+    <div id="modal-pin" class="hidden fixed inset-0 z-50 bg-navy-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-[340px] rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up text-center">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-brand-sail flex items-center justify-center mx-auto">
+                <i data-lucide="key-round" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="font-display font-bold text-base text-navy-900">Modo Desarrollador</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Ingresa el PIN de 4 dígitos para ver Arquitectura y GAS</p>
+            </div>
+            <form onsubmit="verifySecretPin(event)" class="space-y-3">
+                <input type="password" inputmode="numeric" maxlength="4" id="secret-pin-input" placeholder="••••" required
+                    class="w-full text-center tracking-[0.5em] font-metric font-bold text-xl bg-slate-50 border border-slate-200 rounded-2xl py-3 text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button type="button" onclick="closeModal('modal-pin')" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 font-display font-semibold text-xs">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="py-2.5 rounded-xl bg-brand-sail text-white font-display font-semibold text-xs shadow-glow-blue">
+                        Desbloquear
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -1430,13 +1504,127 @@ self.addEventListener('fetch', event => {
             format(amount, currency) {
                 const num = Number(amount || 0);
                 const sym = this.getSymbol(currency);
-                const formatted = num.toLocaleString('es-VE', {
+                const formatted = num.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
                 return `${sym} ${formatted} ${currency}`;
             }
         };
+
+        /**
+         * FORMATEADOR NUMÉRICO EN VIVO (FORMATO 1,000.00) SIN BLOQUEOS DE STEP HTML5
+         */
+        function formatNumberToMask(value, decimals = 2) {
+            const num = Number(value);
+            if (isNaN(num)) return '';
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function parseFormattedNumber(rawStr) {
+            if (typeof rawStr === 'number') return rawStr;
+            const cleaned = String(rawStr || '').replace(/,/g, '').trim();
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function formatCurrencyInputLive(inputEl) {
+            const raw = inputEl.value;
+            // Permitir solo dígitos y un único punto decimal
+            let cleaned = raw.replace(/[^0-9.]/g, '');
+            const parts = cleaned.split('.');
+            if (parts.length > 2) {
+                cleaned = parts[0] + '.' + parts.slice(1).join('');
+            }
+            const [intPartRaw, decPart] = cleaned.split('.');
+            // Eliminar ceros a la izquierda innecesarios salvo "0"
+            const intNormalized = intPartRaw ? intPartRaw.replace(/^0+(?=\d)/, '') : '';
+            const intFormatted = intNormalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            if (decPart !== undefined) {
+                inputEl.value = `${intFormatted || '0'}.${decPart.slice(0, 4)}`;
+            } else {
+                inputEl.value = intFormatted;
+            }
+        }
+
+        function formatCurrencyInputBlur(inputEl, decimals = 2) {
+            const val = parseFormattedNumber(inputEl.value);
+            if (val > 0 || inputEl.value.trim() !== '') {
+                inputEl.value = formatNumberToMask(val, decimals);
+            }
+        }
+
+        /**
+         * SINCRONIZACIÓN DE TASAS DE CAMBIO POR INTERNET (BCV / PARALELO / EUR)
+         */
+        async function fetchRatesFromInternet(mode = 'oficial') {
+            const statusEl = document.getElementById('online-rates-status');
+            const previewEl = document.getElementById('online-rates-preview');
+            statusEl.textContent = 'Consultando...';
+            statusEl.className = 'text-[10px] font-semibold text-brand-poppy animate-pulse';
+
+            try {
+                // 1. Consultar DolarAPI Venezuela (BCV Oficial y Paralelo) + Open Exchange Rates (EUR)
+                const [veRes, globalRes] = await Promise.allSettled([
+                    fetch('https://ve.dolarapi.com/v1/dolares'),
+                    fetch('https://open.er-api.com/v6/latest/USD')
+                ]);
+
+                let bsRate = null;
+                let bcvVal = null;
+                let paraleloVal = null;
+
+                if (veRes.status === 'fulfilled' && veRes.value.ok) {
+                    const veData = await veRes.value.json();
+                    const oficialObj = Array.isArray(veData) ? veData.find(d => d.fuente === 'oficial') : null;
+                    const paraleloObj = Array.isArray(veData) ? veData.find(d => d.fuente === 'paralelo') : null;
+                    bcvVal = oficialObj?.promedio ? Number(oficialObj.promedio) : null;
+                    paraleloVal = paraleloObj?.promedio ? Number(paraleloObj.promedio) : null;
+                    bsRate = mode === 'paralelo' ? (paraleloVal || bcvVal) : (bcvVal || paraleloVal);
+                }
+
+                let eurRate = null;
+                if (globalRes.status === 'fulfilled' && globalRes.value.ok) {
+                    const globalData = await globalRes.value.json();
+                    if (globalData?.rates?.EUR) {
+                        eurRate = Number(globalData.rates.EUR);
+                    }
+                    if (!bsRate && globalData?.rates?.VES) {
+                        bsRate = Number(globalData.rates.VES);
+                    }
+                }
+
+                if (!bsRate && !eurRate) {
+                    throw new Error('No se pudo conectar con el servidor de tasas');
+                }
+
+                if (bsRate) {
+                    document.getElementById('rate-input-BS').value = formatNumberToMask(bsRate, 2);
+                }
+                document.getElementById('rate-input-USDT').value = formatNumberToMask(1.00, 2);
+                if (eurRate) {
+                    document.getElementById('rate-input-EUR').value = formatNumberToMask(eurRate, 2);
+                }
+
+                statusEl.textContent = 'Actualizado';
+                statusEl.className = 'text-[10px] font-semibold text-brand-teal';
+
+                if (bcvVal || paraleloVal) {
+                    previewEl.classList.remove('hidden');
+                    previewEl.textContent = `Internet hoy: BCV Bs. ${bcvVal ? formatNumberToMask(bcvVal, 2) : '--'} • Paralelo Bs. ${paraleloVal ? formatNumberToMask(paraleloVal, 2) : '--'}`;
+                }
+
+                showToast(`Tasa ${mode === 'paralelo' ? 'Paralelo' : 'BCV'} cargada en el formulario.`);
+            } catch (err) {
+                statusEl.textContent = 'Sin conexión';
+                statusEl.className = 'text-[10px] font-semibold text-rose-500';
+                showToast('No se pudo obtener la tasa online. Puedes escribirla manualmente.', 'warning');
+            }
+        }
 
         /**
          * 3. INICIALIZACIÓN Y DATOS SEMILLA DE DEMOSTRACIÓN
@@ -1651,9 +1839,9 @@ self.addEventListener('fetch', event => {
         }
 
         function renderHeaderAndRatesPill() {
-            const bsRate = CurrencyEngine.getRateToUSD('BS').toFixed(2);
-            const usdtRate = CurrencyEngine.getRateToUSD('USDT').toFixed(2);
-            const eurRate = CurrencyEngine.getRateToUSD('EUR').toFixed(2);
+            const bsRate = formatNumberToMask(CurrencyEngine.getRateToUSD('BS'), 2);
+            const usdtRate = formatNumberToMask(CurrencyEngine.getRateToUSD('USDT'), 2);
+            const eurRate = formatNumberToMask(CurrencyEngine.getRateToUSD('EUR'), 2);
             document.getElementById('pill-rates-summary').textContent = `${bsRate} BS • ${usdtRate} USDT • ${eurRate} EUR`;
 
             // Contador de cambios pendientes de sincronizar
@@ -1697,7 +1885,7 @@ self.addEventListener('fetch', event => {
             const displayedNetWorth = CurrencyEngine.fromUSDPivot(totalNetWorthUSD, targetCurr);
             document.getElementById('hero-net-worth').textContent = CurrencyEngine.format(displayedNetWorth, targetCurr);
             document.getElementById('hero-sub-equivalent').textContent =
-                `Valor Pivote Exacto: $${totalNetWorthUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD • ${ CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalNetWorthUSD, 'BS'), 'BS') }`;
+                `Valor Pivote Exacto: $${totalNetWorthUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD • ${ CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalNetWorthUSD, 'BS'), 'BS') }`;
 
             // 2. Métricas de Ingresos y Gastos (Usando el valor histórico inmutable en USD y convirtiendo a la moneda seleccionada)
             const totalIncomeUSD = activeTx
@@ -1725,10 +1913,10 @@ self.addEventListener('fetch', event => {
             // 3. Renderizar Tarjetas de Cuentas (Saldo Original + Equivalente Dinámico)
             const accContainer = document.getElementById('dashboard-accounts-list');
             const accentStyles = {
-                purple: { badge: 'bg-purple-50 text-brand-purple', border: 'border-l-4 border-l-brand-purple' },
-                blue: { badge: 'bg-blue-50 text-brand-blue', border: 'border-l-4 border-l-brand-blue' },
+                purple: { badge: 'bg-blue-50 text-brand-sail', border: 'border-l-4 border-l-brand-sail' },
+                blue: { badge: 'bg-blue-50 text-brand-sailDark', border: 'border-l-4 border-l-brand-sailDark' },
                 teal: { badge: 'bg-teal-50 text-brand-teal', border: 'border-l-4 border-l-brand-teal' },
-                amber: { badge: 'bg-amber-50 text-brand-amber', border: 'border-l-4 border-l-brand-amber' }
+                amber: { badge: 'bg-orange-50 text-brand-poppy', border: 'border-l-4 border-l-brand-poppy' }
             };
 
             accContainer.innerHTML = activeAccounts.map(acc => {
@@ -2005,7 +2193,7 @@ self.addEventListener('fetch', event => {
             document.getElementById('tx-rate-unit-label').textContent = `${acc.currency} x 1 USD`;
             const currentRate = CurrencyEngine.getRateToUSD(acc.currency);
             const rateInput = document.getElementById('tx-exchange-rate');
-            rateInput.value = currentRate;
+            rateInput.value = formatNumberToMask(currentRate, 2);
             rateInput.readOnly = (acc.currency === 'USD');
             recalculateTxPreview();
         }
@@ -2013,11 +2201,11 @@ self.addEventListener('fetch', event => {
         function recalculateTxPreview() {
             const accId = document.getElementById('tx-account').value;
             const acc = AppState.accounts.find(a => a.id === accId);
-            const amount = Number(document.getElementById('tx-amount').value || 0);
-            const rate = Number(document.getElementById('tx-exchange-rate').value || 1);
+            const amount = parseFormattedNumber(document.getElementById('tx-amount').value);
+            const rate = parseFormattedNumber(document.getElementById('tx-exchange-rate').value) || 1;
             const curr = acc ? acc.currency : 'USD';
             const pivotUSD = CurrencyEngine.toUSDPivot(amount, curr, rate);
-            document.getElementById('tx-usd-pivot-preview').textContent = `$${pivotUSD.toFixed(2)} USD`;
+            document.getElementById('tx-usd-pivot-preview').textContent = `$${formatNumberToMask(pivotUSD, 2)} USD`;
         }
 
         async function saveTransaction(e) {
@@ -2026,8 +2214,12 @@ self.addEventListener('fetch', event => {
             const acc = AppState.accounts.find(a => a.id === accId);
             if (!acc) return;
 
-            const originalAmount = Number(document.getElementById('tx-amount').value);
-            const exchangeRateUsed = Number(document.getElementById('tx-exchange-rate').value);
+            const originalAmount = parseFormattedNumber(document.getElementById('tx-amount').value);
+            const exchangeRateUsed = parseFormattedNumber(document.getElementById('tx-exchange-rate').value);
+            if (originalAmount <= 0 || exchangeRateUsed <= 0) {
+                showToast('Ingresa un monto y tasa mayores a 0.00', 'warning');
+                return;
+            }
             const amountUsdPivot = Number(CurrencyEngine.toUSDPivot(originalAmount, acc.currency, exchangeRateUsed).toFixed(4));
             const now = Date.now();
 
@@ -2064,7 +2256,7 @@ self.addEventListener('fetch', event => {
                 id: generateUUID(),
                 name: document.getElementById('acc-name').value.trim(),
                 currency: document.getElementById('acc-currency').value,
-                initial_balance: Number(document.getElementById('acc-initial').value || 0),
+                initial_balance: parseFormattedNumber(document.getElementById('acc-initial').value),
                 color: document.getElementById('acc-color').value,
                 icon: 'wallet',
                 created_at: now,
@@ -2099,13 +2291,18 @@ self.addEventListener('fetch', event => {
             e.preventDefault();
             const now = Date.now();
             const curr = document.getElementById('debt-currency').value;
+            const totalAmt = parseFormattedNumber(document.getElementById('debt-total').value);
+            if (totalAmt <= 0) {
+                showToast('Ingresa un monto total válido.', 'warning');
+                return;
+            }
             const newDebt = {
                 id: generateUUID(),
                 kind: AppState.currentDebtKind,
                 counterparty: document.getElementById('debt-counterparty').value.trim(),
                 title: document.getElementById('debt-title').value.trim(),
                 currency: curr,
-                total_amount: Number(document.getElementById('debt-total').value),
+                total_amount: totalAmt,
                 paid_amount: 0,
                 exchange_rate_created: CurrencyEngine.getRateToUSD(curr),
                 due_date: document.getElementById('debt-due').value,
@@ -2133,8 +2330,8 @@ self.addEventListener('fetch', event => {
             document.getElementById('pay-debt-summary-title').textContent = `${debt.title} (${debt.counterparty})`;
             document.getElementById('pay-debt-summary-remaining').textContent = `Saldo pendiente: ${CurrencyEngine.format(remaining, debt.currency)}`;
             document.getElementById('pay-debt-curr-span').textContent = debt.currency;
-            document.getElementById('pay-debt-amount').value = remaining.toFixed(2);
-            document.getElementById('pay-debt-rate').value = CurrencyEngine.getRateToUSD(debt.currency);
+            document.getElementById('pay-debt-amount').value = formatNumberToMask(remaining, 2);
+            document.getElementById('pay-debt-rate').value = formatNumberToMask(CurrencyEngine.getRateToUSD(debt.currency), 2);
 
             const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
             const accSelect = document.getElementById('pay-debt-account');
@@ -2153,8 +2350,12 @@ self.addEventListener('fetch', event => {
             const acc = AppState.accounts.find(a => a.id === accId);
             if (!debt || !acc) return;
 
-            const payAmountInDebtCurr = Number(document.getElementById('pay-debt-amount').value);
-            const rateUsed = Number(document.getElementById('pay-debt-rate').value);
+            const payAmountInDebtCurr = parseFormattedNumber(document.getElementById('pay-debt-amount').value);
+            const rateUsed = parseFormattedNumber(document.getElementById('pay-debt-rate').value);
+            if (payAmountInDebtCurr <= 0 || rateUsed <= 0) {
+                showToast('Monto y tasa deben ser mayores a 0.00', 'warning');
+                return;
+            }
             const now = Date.now();
 
             // Actualizar estado de la deuda
@@ -2235,7 +2436,7 @@ self.addEventListener('fetch', event => {
             e.preventDefault();
             const now = Date.now();
             ['BS', 'USDT', 'EUR'].forEach(curr => {
-                const val = Number(document.getElementById(`rate-input-${curr}`).value);
+                const val = parseFormattedNumber(document.getElementById(`rate-input-${curr}`).value);
                 if (val > 0) {
                     AppState.rates[curr].rate_to_usd = val;
                     AppState.rates[curr].updated_at = now;
@@ -2249,7 +2450,7 @@ self.addEventListener('fetch', event => {
 
             closeModal('modal-rates');
             renderAllViews();
-            showToast('Tasas de cambio actualizadas (los registros pasados conservan su tasa histórica).');
+            showToast('Tasas de cambio actualizadas en formato 1,000.00.');
         }
 
         /**
@@ -2411,24 +2612,47 @@ self.addEventListener('fetch', event => {
         }
 
         /**
-         * 8. NAVEGACIÓN ENTRE PESTAÑAS, MODALES Y PORTAPAPELES
+         * 8. NAVEGACIÓN ENTRE PESTAÑAS, MODALES, PIN OCULTO (3312) Y PORTAPAPELES
          */
+        function handleSecretAccessClick() {
+            const docs = document.getElementById('workspace-docs');
+            if (!docs.classList.contains('hidden')) {
+                switchWorkspace('pwa');
+                return;
+            }
+            document.getElementById('secret-pin-input').value = '';
+            openModal('modal-pin');
+            setTimeout(() => document.getElementById('secret-pin-input').focus(), 100);
+        }
+
+        function verifySecretPin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('secret-pin-input').value.trim();
+            if (pin === '3312') {
+                closeModal('modal-pin');
+                switchWorkspace('docs');
+                showToast('Modo Arquitectura & GAS desbloqueado.');
+            } else {
+                document.getElementById('secret-pin-input').value = '';
+                showToast('PIN incorrecto.', 'warning');
+            }
+        }
+
         function switchWorkspace(ws) {
             const pwa = document.getElementById('workspace-pwa');
             const docs = document.getElementById('workspace-docs');
-            const btnPwa = document.getElementById('btn-ws-pwa');
-            const btnDocs = document.getElementById('btn-ws-docs');
+            const btnBack = document.getElementById('btn-back-to-pwa');
 
             if (ws === 'pwa') {
                 pwa.classList.remove('hidden');
                 docs.classList.add('hidden');
-                btnPwa.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm';
-                btnDocs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900';
+                btnBack.classList.add('hidden');
+                btnBack.classList.remove('flex');
             } else {
                 pwa.classList.add('hidden');
                 docs.classList.remove('hidden');
-                btnDocs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-navy-900 shadow-sm';
-                btnPwa.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-navy-900';
+                btnBack.classList.remove('hidden');
+                btnBack.classList.add('flex');
             }
             lucide.createIcons();
         }
@@ -2469,9 +2693,9 @@ self.addEventListener('fetch', event => {
 
         function openModal(id) {
             if (id === 'modal-rates') {
-                document.getElementById('rate-input-BS').value = CurrencyEngine.getRateToUSD('BS');
-                document.getElementById('rate-input-USDT').value = CurrencyEngine.getRateToUSD('USDT');
-                document.getElementById('rate-input-EUR').value = CurrencyEngine.getRateToUSD('EUR');
+                document.getElementById('rate-input-BS').value = formatNumberToMask(CurrencyEngine.getRateToUSD('BS'), 2);
+                document.getElementById('rate-input-USDT').value = formatNumberToMask(CurrencyEngine.getRateToUSD('USDT'), 2);
+                document.getElementById('rate-input-EUR').value = formatNumberToMask(CurrencyEngine.getRateToUSD('EUR'), 2);
             }
             if (id === 'modal-sync') {
                 document.getElementById('gas-endpoint-input').value = AppState.gasWebAppUrl || '';
