@@ -1068,6 +1068,79 @@ self.addEventListener('fetch', event => {
                 </div>
 
                 <!-- Selección de Cuenta -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Cuenta Afectada</label>
+                    <select id="tx-account" onchange="handleTxAccountChange()" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                    </select>
+                </div>
+
+                <!-- Monto Original y Tasa de Cambio Histórica Inmutable -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">
+                            Monto (<span id="tx-currency-label" class="font-bold text-brand-sail">USD</span>)
+                        </label>
+                        <input type="text" inputmode="decimal" id="tx-amount"
+                            oninput="formatCurrencyInputLive(this); recalculateTxPreview()"
+                            onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()"
+                            required placeholder="0.00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">
+                            Tasa (<span id="tx-rate-unit-label">x 1 USD</span>)
+                        </label>
+                        <input type="text" inputmode="decimal" id="tx-exchange-rate"
+                            oninput="formatCurrencyInputLive(this); recalculateTxPreview()"
+                            onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()"
+                            required placeholder="1.00"
+                            class="w-full bg-orange-50/70 border border-orange-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-poppy">
+                    </div>
+                </div>
+
+                <!-- Equivalencia Inmutable en Moneda Pivote (USD) -->
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/70 flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Equivalente Pivote Inmutable:</span>
+                    <span id="tx-usd-pivot-preview" class="font-metric font-bold text-brand-sail">$0.00 USD</span>
+                </div>
+
+                <!-- Categoría y Fecha -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Categoría</label>
+                        <select id="tx-category" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900 focus:outline-none">
+                            <option value="Alimentación">Alimentación</option>
+                            <option value="Servicios">Servicios</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Salario / Honorarios">Salario / Honorarios</option>
+                            <option value="Ventas / Negocio">Ventas / Negocio</option>
+                            <option value="Salud">Salud</option>
+                            <option value="Ocio & Compras">Ocio & Compras</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
+                        <input type="date" id="tx-date" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Descripción / Concepto -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Descripción / Concepto</label>
+                    <input type="text" id="tx-description" required placeholder="Ej. Supermercado, Pago cliente..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple hover:opacity-95 transition">
+                    Guardar Transacción (Congelar Tasa)
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL 2: CREAR / EDITAR CUENTA MULTIDIVISA -->
     <div id="modal-account" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
