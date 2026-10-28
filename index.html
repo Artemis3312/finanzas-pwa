@@ -281,9 +281,14 @@
                     <div>
                         <div class="flex items-center justify-between mb-3">
                             <h2 class="font-display font-bold text-sm text-navy-900">Cuentas por Moneda</h2>
-                            <button onclick="openModal('modal-account')" class="text-xs font-semibold text-brand-purple hover:underline flex items-center gap-1">
-                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Nueva Cuenta
-                            </button>
+                            <div class="flex items-center gap-3">
+                                <button onclick="openTransferModal()" class="text-xs font-semibold text-brand-poppyDark hover:underline flex items-center gap-1">
+                                    <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Transferir
+                                </button>
+                                <button onclick="openCreateAccountModal()" class="text-xs font-semibold text-brand-purple hover:underline flex items-center gap-1">
+                                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Nueva Cuenta
+                                </button>
+                            </div>
                         </div>
                         <div id="dashboard-accounts-list" class="space-y-3">
                             <!-- Renderizado dinámicamente -->
@@ -1049,102 +1054,40 @@ self.addEventListener('fetch', event => {
             <form id="form-transaction" onsubmit="saveTransaction(event)" class="space-y-3.5">
                 <input type="hidden" id="tx-id" value="">
 
-                <!-- Selector Tipo: Gasto vs Ingreso -->
-                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+                <!-- Selector Tipo: Gasto vs Ingreso vs Transferencia -->
+                <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-2xl">
                     <button type="button" id="btn-type-expense" onclick="setTxType('EXPENSE')" class="py-2 rounded-xl font-display font-semibold text-xs bg-white text-brand-orange shadow-xs transition">
                         Gasto (-)
                     </button>
                     <button type="button" id="btn-type-income" onclick="setTxType('INCOME')" class="py-2 rounded-xl font-display font-semibold text-xs text-slate-500 transition">
                         Ingreso (+)
                     </button>
+                    <button type="button" onclick="closeModal('modal-transaction'); openTransferModal();" class="py-2 rounded-xl font-display font-semibold text-xs text-brand-sail hover:bg-white/60 transition flex items-center justify-center gap-1">
+                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Transferir
+                    </button>
                 </div>
 
                 <!-- Selección de Cuenta -->
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Cuenta Origen / Destino</label>
-                    <select id="tx-account" onchange="handleTxAccountChange()" required
-                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
-                    </select>
-                </div>
-
-                <!-- Monto Original y Tasa Histórica Inmutable (Con auto-formato 1,000.00) -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Monto (<span id="tx-currency-label">USD</span>)</label>
-                        <input type="text" inputmode="decimal" id="tx-amount" oninput="formatCurrencyInputLive(this); recalculateTxPreview()" onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()" required placeholder="0.00"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Tasa (<span id="tx-rate-unit-label">x 1 USD</span>)</label>
-                        <input type="text" inputmode="decimal" id="tx-exchange-rate" oninput="formatCurrencyInputLive(this); recalculateTxPreview()" onblur="formatCurrencyInputBlur(this, 2); recalculateTxPreview()" required placeholder="1.00"
-                            class="w-full bg-orange-50/60 border border-orange-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-poppy">
-                    </div>
-                </div>
-
-                <!-- Banner de Equivalencia Pivote Inmutable -->
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between text-xs">
-                    <span class="text-slate-500 flex items-center gap-1.5">
-                        <i data-lucide="lock" class="w-3.5 h-3.5 text-brand-purple"></i>
-                        Valor Pivote Inmutable:
-                    </span>
-                    <span class="font-metric font-bold text-navy-900" id="tx-usd-pivot-preview">$0.00 USD</span>
-                </div>
-
-                <!-- Categoría y Fecha -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Categoría</label>
-                        <select id="tx-category" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
-                            <option value="Alimentación">Alimentación</option>
-                            <option value="Servicios">Servicios / Internet</option>
-                            <option value="Transporte">Transporte</option>
-                            <option value="Salud">Salud</option>
-                            <option value="Salario / Honorarios">Salario / Honorarios</option>
-                            <option value="Ventas / Negocio">Ventas / Negocio</option>
-                            <option value="Abono Deuda">Abono / Pago Deuda</option>
-                            <option value="Otros">Otros</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
-                        <input type="date" id="tx-date" required
-                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
-                    </div>
-                </div>
-
-                <!-- Descripción -->
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Concepto / Nota</label>
-                    <input type="text" id="tx-description" required placeholder="Ej. Compra supermercado / Pago cliente"
-                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-purple">
-                </div>
-
-                <button type="submit" class="w-full py-3.5 rounded-2xl bg-purple-gradient text-white font-display font-semibold text-xs shadow-glow-purple hover:opacity-95 transition">
-                    Guardar Registro Histórico
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL 2: CREAR NUEVA CUENTA MULTIDIVISA -->
+    <!-- MODAL 2: CREAR / EDITAR CUENTA MULTIDIVISA -->
     <div id="modal-account" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="bg-white w-full max-w-[420px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
             <div class="flex items-center justify-between">
-                <h3 class="font-display font-bold text-base text-navy-900">Nueva Cuenta / Billetera</h3>
+                <h3 class="font-display font-bold text-base text-navy-900" id="acc-modal-title">Nueva Cuenta / Billetera</h3>
                 <button onclick="closeModal('modal-account')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
             <form onsubmit="saveAccount(event)" class="space-y-3.5">
+                <input type="hidden" id="acc-id" value="">
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">Nombre de la Cuenta</label>
                     <input type="text" id="acc-name" required placeholder="Ej. Banesco, Binance USDT, Zelle..."
-                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-medium text-navy-900">
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-medium text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Moneda Nativa</label>
-                        <select id="acc-currency" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-semibold text-navy-900">
+                        <select id="acc-currency" onchange="updateAccountBalancePreview('initial')" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-semibold text-navy-900">
                             <option value="USD">USD ($) - Dólar</option>
                             <option value="USDT">USDT (₮) - Tether</option>
                             <option value="BS">BS (Bs.) - Bolívar</option>
@@ -1152,11 +1095,27 @@ self.addEventListener('fetch', event => {
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Saldo Inicial</label>
-                        <input type="text" inputmode="decimal" id="acc-initial" value="0.00" oninput="formatCurrencyInputLive(this)" onblur="formatCurrencyInputBlur(this, 2)" required
-                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Saldo Inicial (Apertura)</label>
+                        <input type="text" inputmode="decimal" id="acc-initial" value="0.00"
+                            oninput="formatCurrencyInputLive(this); updateAccountBalancePreview('initial')"
+                            onblur="formatCurrencyInputBlur(this, 2); updateAccountBalancePreview('initial')" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-xs text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
                     </div>
                 </div>
+
+                <!-- Ajuste directo de Saldo Actual (Visible especialmente al editar o verificar saldo final) -->
+                <div id="acc-current-balance-box" class="bg-blue-50/60 border border-brand-sail/20 rounded-2xl p-3 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold text-brand-sail">Saldo Actual Total en Cuenta</label>
+                        <span id="acc-tx-delta-label" class="text-[10px] text-slate-500">Movimientos: 0.00</span>
+                    </div>
+                    <input type="text" inputmode="decimal" id="acc-current-total" value="0.00"
+                        oninput="formatCurrencyInputLive(this); updateAccountBalancePreview('current')"
+                        onblur="formatCurrencyInputBlur(this, 2); updateAccountBalancePreview('current')"
+                        class="w-full bg-white border border-brand-sail/30 rounded-xl px-3 py-2 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                    <p class="text-[10px] text-slate-500">Si modificas el Saldo Inicial o el Saldo Actual, ambos se ajustan automáticamente.</p>
+                </div>
+
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">Estilo de Acento</label>
                     <select id="acc-color" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
@@ -1166,8 +1125,104 @@ self.addEventListener('fetch', event => {
                         <option value="blue">Azul Marino</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full py-3 rounded-2xl bg-brand-sail text-white font-display font-semibold text-xs shadow-glow-blue">
+                <button type="submit" id="acc-submit-btn" class="w-full py-3 rounded-2xl bg-brand-sail text-white font-display font-semibold text-xs shadow-glow-blue">
                     Crear Cuenta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2B: TRANSFERENCIA DE ACTIVOS ENTRE CUENTAS CON TASA AUTOMÁTICA -->
+    <div id="modal-transfer" class="hidden fixed inset-0 z-50 bg-navy-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-[430px] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-orange-50 text-brand-poppy flex items-center justify-center">
+                        <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-navy-900">Transferir entre Cuentas</h3>
+                        <p class="text-[11px] text-slate-400">Conversión multimoneda automática</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-transfer')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form onsubmit="saveTransfer(event)" class="space-y-3.5">
+                <!-- Cuenta Origen y Destino -->
+                <div class="grid grid-cols-1 gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Desde Cuenta Origen (Sale -)</label>
+                        <select id="transfer-from-acc" onchange="handleTransferAccountsChange('from')" required
+                            class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                        </select>
+                    </div>
+                    <div class="flex justify-center -my-1">
+                        <button type="button" onclick="swapTransferAccounts()" title="Invertir cuentas"
+                            class="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-brand-sail hover:bg-blue-50 transition">
+                            <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Hacia Cuenta Destino (Entra +)</label>
+                        <select id="transfer-to-acc" onchange="handleTransferAccountsChange('to')" required
+                            class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Monto que sale y Tasa Aplicada -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Monto a Enviar (<span id="transfer-from-curr">USD</span>)</label>
+                        <input type="text" inputmode="decimal" id="transfer-amount-from"
+                            oninput="formatCurrencyInputLive(this); recalculateTransfer('from')"
+                            onblur="formatCurrencyInputBlur(this, 2); recalculateTransfer('from')" required placeholder="0.00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 font-metric font-bold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-sail">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1" id="transfer-rate-label">Tasa Aplicada</label>
+                        <input type="text" inputmode="decimal" id="transfer-rate-input"
+                            oninput="formatCurrencyInputLive(this); recalculateTransfer('rate')"
+                            onblur="formatCurrencyInputBlur(this, 2); recalculateTransfer('rate')" required placeholder="1.00"
+                            class="w-full bg-orange-50/70 border border-orange-200 rounded-2xl px-3.5 py-2.5 font-metric font-semibold text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-poppy">
+                    </div>
+                </div>
+
+                <!-- Monto que recibe la cuenta destino (Calculado automáticamente o editable) -->
+                <div class="bg-teal-50/60 border border-teal-200/80 rounded-2xl p-3.5 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-brand-teal flex items-center gap-1.5">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            Monto a Recibir (<span id="transfer-to-curr">BS</span>)
+                        </label>
+                        <span id="transfer-pivot-badge" class="text-[11px] font-mono font-semibold text-slate-500">Pivote: $0.00 USD</span>
+                    </div>
+                    <input type="text" inputmode="decimal" id="transfer-amount-to"
+                        oninput="formatCurrencyInputLive(this); recalculateTransfer('to')"
+                        onblur="formatCurrencyInputBlur(this, 2); recalculateTransfer('to')" required placeholder="0.00"
+                        class="w-full bg-white border border-teal-300 rounded-xl px-3.5 py-2 font-metric font-bold text-base text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                    <p class="text-[10px] text-slate-500" id="transfer-rate-explanation">Se aplica automáticamente la tasa activa configurada.</p>
+                </div>
+
+                <!-- Fecha y Nota -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
+                        <input type="date" id="transfer-date" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-medium text-navy-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Concepto / Nota</label>
+                        <input type="text" id="transfer-note" placeholder="Ej. Cambio USDT a Bs"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs text-navy-900">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-poppy-gradient text-white font-display font-semibold text-xs shadow-glow-poppy hover:opacity-95 transition">
+                    Ejecutar Transferencia entre Cuentas
                 </button>
             </form>
         </div>
@@ -1887,13 +1942,13 @@ self.addEventListener('fetch', event => {
             document.getElementById('hero-sub-equivalent').textContent =
                 `Valor Pivote Exacto: $${totalNetWorthUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD • ${ CurrencyEngine.format(CurrencyEngine.fromUSDPivot(totalNetWorthUSD, 'BS'), 'BS') }`;
 
-            // 2. Métricas de Ingresos y Gastos (Usando el valor histórico inmutable en USD y convirtiendo a la moneda seleccionada)
+            // 2. Métricas de Ingresos y Gastos (Excluyendo transferencias internas entre cuentas propias)
             const totalIncomeUSD = activeTx
-                .filter(t => t.type === 'INCOME')
+                .filter(t => t.type === 'INCOME' && t.category !== 'Transferencia')
                 .reduce((sum, t) => sum + Number(t.amount_usd_pivot || 0), 0);
 
             const totalExpenseUSD = activeTx
-                .filter(t => t.type === 'EXPENSE')
+                .filter(t => t.type === 'EXPENSE' && t.category !== 'Transferencia')
                 .reduce((sum, t) => sum + Number(t.amount_usd_pivot || 0), 0);
 
             const totalPayableUSD = activeDebts
@@ -1950,7 +2005,15 @@ self.addEventListener('fetch', event => {
                         </div>
                         <div class="text-right">
                             <p class="font-metric font-bold text-base text-navy-900">${primaryText}</p>
-                            <button onclick="softDeleteAccount('${acc.id}')" class="text-[10px] text-slate-400 hover:text-rose-600">Archivar</button>
+                            <div class="flex items-center justify-end gap-2.5 mt-1">
+                                <button onclick="openEditAccountModal('${acc.id}')" class="text-[11px] font-semibold text-brand-sail hover:underline flex items-center gap-0.5">
+                                    <i data-lucide="pencil" class="w-3 h-3"></i> Editar
+                                </button>
+                                <button onclick="openTransferModal('${acc.id}')" class="text-[11px] font-semibold text-brand-poppyDark hover:underline">
+                                    Transferir
+                                </button>
+                                <button onclick="softDeleteAccount('${acc.id}')" class="text-[10px] text-slate-400 hover:text-rose-600">Archivar</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1998,10 +2061,15 @@ self.addEventListener('fetch', event => {
             const acc = AppState.accounts.find(a => a.id === tx.account_id);
             const accName = acc ? acc.name : 'Cuenta';
             const isIncome = tx.type === 'INCOME';
+            const isTransfer = tx.category === 'Transferencia';
             const sign = isIncome ? '+' : '-';
             const colorClass = isIncome ? 'text-brand-teal' : 'text-navy-900';
-            const iconBg = isIncome ? 'bg-teal-50 text-brand-teal' : 'bg-amber-50 text-brand-orange';
-            const iconName = isIncome ? 'arrow-down-left' : 'arrow-up-right';
+            const iconBg = isTransfer
+                ? 'bg-blue-50 text-brand-sail'
+                : (isIncome ? 'bg-teal-50 text-brand-teal' : 'bg-amber-50 text-brand-orange');
+            const iconName = isTransfer
+                ? 'arrow-left-right'
+                : (isIncome ? 'arrow-down-left' : 'arrow-up-right');
 
             // Mostrar monto original o equivalente según selector, pero SIEMPRE mostrar la tasa histórica inmutable
             let mainAmountStr = `${sign} ${CurrencyEngine.format(tx.original_amount, tx.original_currency)}`;
@@ -2249,29 +2317,350 @@ self.addEventListener('fetch', event => {
             showToast('Transacción guardada con tasa histórica inmutable.');
         }
 
+        /**
+         * CREACIÓN Y EDICIÓN DE CUENTAS (NOMBRE, MONEDA, SALDO INICIAL O SALDO ACTUAL)
+         */
+        function openCreateAccountModal() {
+            document.getElementById('acc-id').value = '';
+            document.getElementById('acc-modal-title').textContent = 'Nueva Cuenta / Billetera';
+            document.getElementById('acc-submit-btn').textContent = 'Crear Cuenta';
+            document.getElementById('acc-name').value = '';
+            document.getElementById('acc-currency').value = 'USD';
+            document.getElementById('acc-initial').value = '0.00';
+            document.getElementById('acc-current-total').value = '0.00';
+            document.getElementById('acc-tx-delta-label').textContent = 'Movimientos netos: 0.00';
+            document.getElementById('acc-color').value = 'purple';
+            openModal('modal-account');
+        }
+
+        function openEditAccountModal(accId) {
+            const acc = AppState.accounts.find(a => a.id === accId);
+            if (!acc) return;
+
+            const activeTx = AppState.transactions.filter(t => t.account_id === acc.id && Number(t.is_deleted) === 0);
+            const txDelta = activeTx.reduce((sum, tx) => {
+                const amt = Number(tx.original_amount || 0);
+                return tx.type === 'INCOME' ? sum + amt : sum - amt;
+            }, 0);
+            const currentBalance = Number(acc.initial_balance || 0) + txDelta;
+
+            document.getElementById('acc-id').value = acc.id;
+            document.getElementById('acc-modal-title').textContent = 'Editar Cuenta / Billetera';
+            document.getElementById('acc-submit-btn').textContent = 'Guardar Cambios';
+            document.getElementById('acc-name').value = acc.name;
+            document.getElementById('acc-currency').value = acc.currency;
+            document.getElementById('acc-initial').value = formatNumberToMask(acc.initial_balance || 0, 2);
+            document.getElementById('acc-current-total').value = formatNumberToMask(currentBalance, 2);
+            document.getElementById('acc-color').value = acc.color || 'purple';
+
+            const sign = txDelta >= 0 ? '+' : '';
+            document.getElementById('acc-tx-delta-label').textContent =
+                `Movimientos netos: ${sign}${formatNumberToMask(txDelta, 2)} ${acc.currency}`;
+
+            openModal('modal-account');
+        }
+
+        function updateAccountBalancePreview(changedField) {
+            const accId = document.getElementById('acc-id').value;
+            const curr = document.getElementById('acc-currency').value;
+            let txDelta = 0;
+
+            if (accId) {
+                const activeTx = AppState.transactions.filter(t => t.account_id === accId && Number(t.is_deleted) === 0);
+                txDelta = activeTx.reduce((sum, tx) => {
+                    const amt = Number(tx.original_amount || 0);
+                    return tx.type === 'INCOME' ? sum + amt : sum - amt;
+                }, 0);
+            }
+
+            const sign = txDelta >= 0 ? '+' : '';
+            document.getElementById('acc-tx-delta-label').textContent =
+                `Movimientos netos: ${sign}${formatNumberToMask(txDelta, 2)} ${curr}`;
+
+            if (changedField === 'initial') {
+                const initialVal = parseFormattedNumber(document.getElementById('acc-initial').value);
+                const resultingCurrent = initialVal + txDelta;
+                document.getElementById('acc-current-total').value = formatNumberToMask(resultingCurrent, 2);
+            } else if (changedField === 'current') {
+                const desiredCurrent = parseFormattedNumber(document.getElementById('acc-current-total').value);
+                const requiredInitial = desiredCurrent - txDelta;
+                document.getElementById('acc-initial').value = formatNumberToMask(requiredInitial, 2);
+            }
+        }
+
         async function saveAccount(e) {
             e.preventDefault();
             const now = Date.now();
-            const newAcc = {
+            const existingId = document.getElementById('acc-id').value.trim();
+            const name = document.getElementById('acc-name').value.trim();
+            const currency = document.getElementById('acc-currency').value;
+            const initialBalance = parseFormattedNumber(document.getElementById('acc-initial').value);
+            const color = document.getElementById('acc-color').value;
+
+            if (existingId) {
+                const acc = AppState.accounts.find(a => a.id === existingId);
+                if (acc) {
+                    acc.name = name;
+                    acc.currency = currency;
+                    acc.initial_balance = initialBalance;
+                    acc.color = color;
+                    acc.updated_at = now;
+                    acc.sync_status = 'pending';
+                    try { await db.accounts.put(acc); } catch (_) {}
+                    showToast(`Cuenta "${acc.name}" actualizada correctamente.`);
+                }
+            } else {
+                const newAcc = {
+                    id: generateUUID(),
+                    name: name,
+                    currency: currency,
+                    initial_balance: initialBalance,
+                    color: color,
+                    icon: 'wallet',
+                    created_at: now,
+                    updated_at: now,
+                    is_deleted: 0,
+                    sync_status: 'pending'
+                };
+                AppState.accounts.push(newAcc);
+                try { await db.accounts.put(newAcc); } catch (_) {}
+                showToast(`Cuenta ${newAcc.name} (${newAcc.currency}) creada.`);
+            }
+
+            closeModal('modal-account');
+            renderAllViews();
+        }
+
+        /**
+         * TRANSFERENCIA DE ACTIVOS ENTRE CUENTAS CON TASA AUTOMÁTICA
+         */
+        function openTransferModal(preselectedFromId = null) {
+            const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
+            if (activeAccounts.length < 2) {
+                showToast('Necesitas al menos 2 cuentas activas para transferir.', 'warning');
+                return;
+            }
+
+            const fromSelect = document.getElementById('transfer-from-acc');
+            const toSelect = document.getElementById('transfer-to-acc');
+
+            const optionsHtml = activeAccounts.map(a => {
+                const bal = calculateAccountNativeBalance(a);
+                return `<option value="${a.id}">${escapeHtml(a.name)} (${a.currency} • Disp: ${formatNumberToMask(bal, 2)})</option>`;
+            }).join('');
+
+            fromSelect.innerHTML = optionsHtml;
+            toSelect.innerHTML = optionsHtml;
+
+            if (preselectedFromId && activeAccounts.some(a => a.id === preselectedFromId)) {
+                fromSelect.value = preselectedFromId;
+            } else {
+                fromSelect.value = activeAccounts[0].id;
+            }
+
+            const otherAcc = activeAccounts.find(a => a.id !== fromSelect.value) || activeAccounts[0];
+            toSelect.value = otherAcc.id;
+
+            document.getElementById('transfer-amount-from').value = '';
+            document.getElementById('transfer-amount-to').value = '';
+            document.getElementById('transfer-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('transfer-note').value = '';
+
+            setupTransferRatesUI();
+            openModal('modal-transfer');
+        }
+
+        function swapTransferAccounts() {
+            const fromSelect = document.getElementById('transfer-from-acc');
+            const toSelect = document.getElementById('transfer-to-acc');
+            const temp = fromSelect.value;
+            fromSelect.value = toSelect.value;
+            toSelect.value = temp;
+            setupTransferRatesUI();
+        }
+
+        function handleTransferAccountsChange(changedSide) {
+            const fromSelect = document.getElementById('transfer-from-acc');
+            const toSelect = document.getElementById('transfer-to-acc');
+
+            if (fromSelect.value === toSelect.value) {
+                const activeAccounts = AppState.accounts.filter(a => Number(a.is_deleted) === 0);
+                const alternative = activeAccounts.find(a => a.id !== fromSelect.value);
+                if (alternative) {
+                    if (changedSide === 'from') toSelect.value = alternative.id;
+                    else fromSelect.value = alternative.id;
+                }
+            }
+            setupTransferRatesUI();
+        }
+
+        function getAutomaticTransferCrossRate(fromCurr, toCurr) {
+            if (fromCurr === toCurr) return { rateDisplay: 1.00, mode: 'SAME', label: `Paridad (1 ${fromCurr} = 1 ${toCurr})` };
+
+            const rateFromUSD = CurrencyEngine.getRateToUSD(fromCurr); // unidades de fromCurr por 1 USD
+            const rateToUSD = CurrencyEngine.getRateToUSD(toCurr);     // unidades de toCurr por 1 USD
+
+            // Si enviamos de una moneda fuerte (ej. USD/USDT/EUR) a una con tasa mayor (ej. BS), multiplicamos
+            // Si enviamos de BS a USD/USDT, mostramos la tasa en BS por 1 unidad de destino para que sea intuitivo (ej. 45.50 BS por 1 USD)
+            if (rateFromUSD > rateToUSD) {
+                const unitsOriginPerOneDest = rateFromUSD / rateToUSD;
+                return {
+                    rateDisplay: unitsOriginPerOneDest,
+                    mode: 'DIVIDE', // destAmount = fromAmount / rateDisplay
+                    label: `Tasa (${fromCurr} por 1 ${toCurr})`
+                };
+            } else {
+                const unitsDestPerOneOrigin = rateToUSD / rateFromUSD;
+                return {
+                    rateDisplay: unitsDestPerOneOrigin,
+                    mode: 'MULTIPLY', // destAmount = fromAmount * rateDisplay
+                    label: `Tasa (${toCurr} por 1 ${fromCurr})`
+                };
+            }
+        }
+
+        function setupTransferRatesUI() {
+            const fromAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-from-acc').value);
+            const toAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-to-acc').value);
+            if (!fromAcc || !toAcc) return;
+
+            document.getElementById('transfer-from-curr').textContent = fromAcc.currency;
+            document.getElementById('transfer-to-curr').textContent = toAcc.currency;
+
+            const crossInfo = getAutomaticTransferCrossRate(fromAcc.currency, toAcc.currency);
+            const rateInput = document.getElementById('transfer-rate-input');
+            rateInput.dataset.calcMode = crossInfo.mode;
+            rateInput.value = formatNumberToMask(crossInfo.rateDisplay, 2);
+            rateInput.readOnly = (crossInfo.mode === 'SAME');
+
+            document.getElementById('transfer-rate-label').textContent = crossInfo.label;
+            document.getElementById('transfer-rate-explanation').textContent =
+                crossInfo.mode === 'SAME'
+                    ? `Ambas cuentas operan en ${fromAcc.currency} (relación 1:1).`
+                    : `Tasa automática aplicada: ${formatNumberToMask(crossInfo.rateDisplay, 2)} (${crossInfo.label}).`;
+
+            recalculateTransfer('from');
+        }
+
+        function recalculateTransfer(sourceField) {
+            const fromAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-from-acc').value);
+            const toAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-to-acc').value);
+            if (!fromAcc || !toAcc) return;
+
+            const rateInput = document.getElementById('transfer-rate-input');
+            const mode = rateInput.dataset.calcMode || 'MULTIPLY';
+            const fromInput = document.getElementById('transfer-amount-from');
+            const toInput = document.getElementById('transfer-amount-to');
+
+            let amountFrom = parseFormattedNumber(fromInput.value);
+            let rateVal = parseFormattedNumber(rateInput.value) || 1;
+            let amountTo = parseFormattedNumber(toInput.value);
+
+            if (sourceField === 'from' || sourceField === 'rate') {
+                if (mode === 'SAME') {
+                    amountTo = amountFrom;
+                } else if (mode === 'DIVIDE') {
+                    amountTo = rateVal > 0 ? (amountFrom / rateVal) : 0;
+                } else {
+                    amountTo = amountFrom * rateVal;
+                }
+                toInput.value = amountFrom > 0 ? formatNumberToMask(amountTo, 2) : '';
+            } else if (sourceField === 'to') {
+                // Si el usuario edita el monto recibido directamente, ajustamos la tasa efectiva
+                if (mode === 'SAME') {
+                    amountFrom = amountTo;
+                    fromInput.value = amountTo > 0 ? formatNumberToMask(amountFrom, 2) : '';
+                } else if (amountFrom > 0 && amountTo > 0) {
+                    const newEffectiveRate = mode === 'DIVIDE' ? (amountFrom / amountTo) : (amountTo / amountFrom);
+                    rateInput.value = formatNumberToMask(newEffectiveRate, 2);
+                }
+            }
+
+            // Calcular el valor pivote en USD para mostrar en la insignia
+            const usdPivot = fromAcc.currency === 'USD'
+                ? amountFrom
+                : (toAcc.currency === 'USD' ? amountTo : CurrencyEngine.toUSDPivot(amountFrom, fromAcc.currency));
+            document.getElementById('transfer-pivot-badge').textContent = `Pivote: $${formatNumberToMask(usdPivot, 2)} USD`;
+        }
+
+        async function saveTransfer(e) {
+            e.preventDefault();
+            const fromAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-from-acc').value);
+            const toAcc = AppState.accounts.find(a => a.id === document.getElementById('transfer-to-acc').value);
+            if (!fromAcc || !toAcc || fromAcc.id === toAcc.id) {
+                showToast('Selecciona dos cuentas distintas.', 'warning');
+                return;
+            }
+
+            const amountFrom = parseFormattedNumber(document.getElementById('transfer-amount-from').value);
+            const amountTo = parseFormattedNumber(document.getElementById('transfer-amount-to').value);
+
+            if (amountFrom <= 0 || amountTo <= 0) {
+                showToast('Ingresa un monto válido mayor a 0.00', 'warning');
+                return;
+            }
+
+            const txDate = document.getElementById('transfer-date').value;
+            const customNote = document.getElementById('transfer-note').value.trim();
+            const now = Date.now();
+
+            // Determinar el pivote USD exacto de la operación y las tasas históricas inmutables de cada lado
+            let usdPivot = CurrencyEngine.toUSDPivot(amountFrom, fromAcc.currency);
+            if (fromAcc.currency === 'USD') usdPivot = amountFrom;
+            else if (toAcc.currency === 'USD') usdPivot = amountTo;
+
+            const rateUsedFrom = usdPivot > 0 ? Number((amountFrom / usdPivot).toFixed(4)) : CurrencyEngine.getRateToUSD(fromAcc.currency);
+            const rateUsedTo = usdPivot > 0 ? Number((amountTo / usdPivot).toFixed(4)) : CurrencyEngine.getRateToUSD(toAcc.currency);
+            const pivotRounded = Number(usdPivot.toFixed(4));
+
+            const noteSuffix = customNote ? ` • ${customNote}` : '';
+
+            // 1. Transacción Saliente (Cuenta Origen)
+            const outTx = {
                 id: generateUUID(),
-                name: document.getElementById('acc-name').value.trim(),
-                currency: document.getElementById('acc-currency').value,
-                initial_balance: parseFormattedNumber(document.getElementById('acc-initial').value),
-                color: document.getElementById('acc-color').value,
-                icon: 'wallet',
+                account_id: fromAcc.id,
+                debt_id: null,
+                type: 'EXPENSE',
+                category: 'Transferencia',
+                description: `Envío a ${toAcc.name} (${CurrencyEngine.format(amountTo, toAcc.currency)})${noteSuffix}`,
+                original_amount: amountFrom,
+                original_currency: fromAcc.currency,
+                exchange_rate_used: rateUsedFrom,
+                amount_usd_pivot: pivotRounded,
+                tx_date: txDate,
                 created_at: now,
                 updated_at: now,
                 is_deleted: 0,
                 sync_status: 'pending'
             };
 
-            AppState.accounts.push(newAcc);
-            try { await db.accounts.put(newAcc); } catch (_) {}
+            // 2. Transacción Entrante (Cuenta Destino)
+            const inTx = {
+                id: generateUUID(),
+                account_id: toAcc.id,
+                debt_id: null,
+                type: 'INCOME',
+                category: 'Transferencia',
+                description: `Recibido de ${fromAcc.name} (${CurrencyEngine.format(amountFrom, fromAcc.currency)})${noteSuffix}`,
+                original_amount: amountTo,
+                original_currency: toAcc.currency,
+                exchange_rate_used: rateUsedTo,
+                amount_usd_pivot: pivotRounded,
+                tx_date: txDate,
+                created_at: now + 1,
+                updated_at: now + 1,
+                is_deleted: 0,
+                sync_status: 'pending'
+            };
 
-            document.getElementById('acc-name').value = '';
-            closeModal('modal-account');
+            AppState.transactions.push(outTx, inTx);
+            try {
+                await db.transactions.bulkPut([outTx, inTx]);
+            } catch (_) {}
+
+            closeModal('modal-transfer');
             renderAllViews();
-            showToast(`Cuenta ${newAcc.name} (${newAcc.currency}) creada.`);
+            showToast(`Transferencia completada: -${CurrencyEngine.format(amountFrom, fromAcc.currency)} → +${CurrencyEngine.format(amountTo, toAcc.currency)}`);
         }
 
         function setDebtKind(kind) {
