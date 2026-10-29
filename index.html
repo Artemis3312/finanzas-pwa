@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -429,8 +428,8 @@
                                 <span class="flex items-center gap-2"><i data-lucide="calendar-x-2" class="w-4 h-4"></i> Ejecutar Purga de Retención (> 2 Años)</span>
                                 <i data-lucide="play" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="resetDemoDatabase()" class="w-full py-2.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs flex items-center justify-between transition">
-                                <span class="flex items-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar Datos Semilla de Demostración</span>
+                            <button onclick="resetLocalDatabaseClean()" class="w-full py-2.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs flex items-center justify-between transition">
+                                <span class="flex items-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i> Limpiar Datos de Ejemplo / Reiniciar Local</span>
                                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -1518,9 +1517,9 @@ self.addEventListener('fetch', event => {
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">URL del Web App de Google Apps Script (<code>/exec</code>)</label>
-                    <input type="url" id="gas-endpoint-input" placeholder="https://script.google.com/macros/s/.../exec"
+                    <input type="url" id="gas-endpoint-input" oninput="persistGasUrlImmediately(this.value)" placeholder="https://script.google.com/macros/s/.../exec"
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-mono text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-blue">
-                    <p class="text-[11px] text-slate-400 mt-1">Si se deja vacío, la app ejecutará una <strong>Simulación Local de Sincronización LWW</strong> para pruebas instantáneas.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">La URL se guarda automáticamente en memoria permanente apenas la escribes o pegas.</p>
                 </div>
 
                 <div class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/70 space-y-1.5 text-xs">
@@ -1756,172 +1755,105 @@ self.addEventListener('fetch', event => {
         }
 
         /**
-         * 3. INICIALIZACIÓN Y DATOS SEMILLA DE DEMOSTRACIÓN
+         * 3. INICIALIZACIÓN LIMPIA (SIN DATOS DE EJEMPLO) Y PERSISTENCIA DE URL SYNC
          */
+        const GAS_URL_STORAGE_KEY = 'finanzas_pwa_gas_url_v1';
+        const DEMO_CLEANUP_FLAG_KEY = 'finanzas_pwa_demo_purged_v1';
+
         async function initDatabaseAndSeed() {
             try {
-                const accCount = await db.accounts.count();
-                if (accCount === 0) {
-                    await seedInitialData();
+                // Asegurar que las tasas base existan sin crear cuentas ni saldos de ejemplo
+                const ratesCount = await db.exchange_rates.count();
+                if (ratesCount === 0) {
+                    await db.exchange_rates.bulkPut(Object.values(AppState.rates));
                 }
+
                 await loadStateFromIndexedDB();
+                await purgeResidualDemoDataOnce();
                 renderAllViews();
                 registerInlineServiceWorker();
             } catch (err) {
-                console.warn('IndexedDB restringido en este entorno sandbox, operando con réplica en memoria:', err);
-                await seedInMemoryFallback();
+                console.warn('IndexedDB restringido en este entorno, operando en memoria:', err);
+                const savedUrl = localStorage.getItem(GAS_URL_STORAGE_KEY) || '';
+                AppState.gasWebAppUrl = savedUrl;
                 renderAllViews();
             }
         }
 
-        async function seedInitialData() {
+        /**
+         * Elimina automáticamente (con borrado lógico para propagar a Google Sheets si se sincronizaron)
+         * las cuentas, transacciones y deudas de ejemplo que se habían cargado previamente.
+         */
+        async function purgeResidualDemoDataOnce() {
+            const demoAccountNames = new Set([
+                'Zelle / Efectivo USD',
+                'Binance Pay (USDT)',
+                'Banesco PagoMóvil'
+            ]);
+            const demoTxDescriptions = new Set([
+                'Milestone Desarrollo Web',
+                'Compra Supermercado (Tasa histórica 43.20)',
+                'Fibra Óptica + Cloud Hosting'
+            ]);
+            const demoDebtTitles = new Set([
+                'Renovación Monitor & Periféricos',
+                'Factura Soporte Mensual (BS)'
+            ]);
+
             const now = Date.now();
-            const dayMs = 86400000;
+            let modified = false;
 
-            const ratesArray = Object.values(AppState.rates);
-            await db.exchange_rates.bulkPut(ratesArray);
-
-            const accUSD = {
-                id: generateUUID(),
-                name: 'Zelle / Efectivo USD',
-                currency: 'USD',
-                initial_balance: 850.00,
-                color: 'purple',
-                icon: 'dollar-sign',
-                created_at: now - 20 * dayMs,
-                updated_at: now - 20 * dayMs,
-                is_deleted: 0,
-                sync_status: 'synced'
-            };
-            const accUSDT = {
-                id: generateUUID(),
-                name: 'Binance Pay (USDT)',
-                currency: 'USDT',
-                initial_balance: 620.00,
-                color: 'teal',
-                icon: 'shield-check',
-                created_at: now - 18 * dayMs,
-                updated_at: now - 18 * dayMs,
-                is_deleted: 0,
-                sync_status: 'synced'
-            };
-            const accBS = {
-                id: generateUUID(),
-                name: 'Banesco PagoMóvil',
-                currency: 'BS',
-                initial_balance: 14500.00,
-                color: 'blue',
-                icon: 'landmark',
-                created_at: now - 15 * dayMs,
-                updated_at: now - 15 * dayMs,
-                is_deleted: 0,
-                sync_status: 'synced'
-            };
-
-            await db.accounts.bulkPut([accUSD, accUSDT, accBS]);
-
-            // Transacciones con diferentes tasas históricas inmutables para demostrar el requerimiento
-            const sampleTx = [
-                {
-                    id: generateUUID(),
-                    account_id: accUSDT.id,
-                    debt_id: null,
-                    type: 'INCOME',
-                    category: 'Salario / Honorarios',
-                    description: 'Milestone Desarrollo Web',
-                    original_amount: 450.00,
-                    original_currency: 'USDT',
-                    exchange_rate_used: 1.00,
-                    amount_usd_pivot: 450.00,
-                    tx_date: new Date(now - 5 * dayMs).toISOString().split('T')[0],
-                    created_at: now - 5 * dayMs,
-                    updated_at: now - 5 * dayMs,
-                    is_deleted: 0,
-                    sync_status: 'synced'
-                },
-                {
-                    id: generateUUID(),
-                    account_id: accBS.id,
-                    debt_id: null,
-                    type: 'EXPENSE',
-                    category: 'Alimentación',
-                    description: 'Compra Supermercado (Tasa histórica 43.20)',
-                    original_amount: 3456.00,
-                    original_currency: 'BS',
-                    exchange_rate_used: 43.20, // Tasa histórica inmutable de ese día
-                    amount_usd_pivot: 80.00,   // Exactamente $80.00 USD en ese momento
-                    tx_date: new Date(now - 3 * dayMs).toISOString().split('T')[0],
-                    created_at: now - 3 * dayMs,
-                    updated_at: now - 3 * dayMs,
-                    is_deleted: 0,
-                    sync_status: 'synced'
-                },
-                {
-                    id: generateUUID(),
-                    account_id: accUSD.id,
-                    debt_id: null,
-                    type: 'EXPENSE',
-                    category: 'Servicios',
-                    description: 'Fibra Óptica + Cloud Hosting',
-                    original_amount: 45.00,
-                    original_currency: 'USD',
-                    exchange_rate_used: 1.00,
-                    amount_usd_pivot: 45.00,
-                    tx_date: new Date(now - 1 * dayMs).toISOString().split('T')[0],
-                    created_at: now - 1 * dayMs,
-                    updated_at: now - 1 * dayMs,
-                    is_deleted: 0,
-                    sync_status: 'pending'
+            AppState.accounts.forEach(acc => {
+                if (Number(acc.is_deleted) === 0 && demoAccountNames.has(acc.name)) {
+                    acc.is_deleted = 1;
+                    acc.updated_at = now;
+                    acc.sync_status = 'pending';
+                    modified = true;
                 }
-            ];
-
-            await db.transactions.bulkPut(sampleTx);
-
-            const sampleDebts = [
-                {
-                    id: generateUUID(),
-                    kind: 'PAYABLE',
-                    counterparty: ' distribuidora Tech C.A.',
-                    title: 'Renovación Monitor & Periféricos',
-                    currency: 'USD',
-                    total_amount: 240.00,
-                    paid_amount: 90.00,
-                    exchange_rate_created: 1.00,
-                    due_date: new Date(now + 10 * dayMs).toISOString().split('T')[0],
-                    status: 'PARTIAL',
-                    created_at: now - 7 * dayMs,
-                    updated_at: now - 2 * dayMs,
-                    is_deleted: 0,
-                    sync_status: 'pending'
-                },
-                {
-                    id: generateUUID(),
-                    kind: 'RECEIVABLE',
-                    counterparty: 'Cliente Consultoría',
-                    title: 'Factura Soporte Mensual (BS)',
-                    currency: 'BS',
-                    total_amount: 6825.00,
-                    paid_amount: 0.00,
-                    exchange_rate_created: 45.50,
-                    due_date: new Date(now + 5 * dayMs).toISOString().split('T')[0],
-                    status: 'PENDING',
-                    created_at: now - 4 * dayMs,
-                    updated_at: now - 4 * dayMs,
-                    is_deleted: 0,
-                    sync_status: 'synced'
-                }
-            ];
-
-            await db.debts.bulkPut(sampleDebts);
-
-            await db.app_meta.put({
-                key: 'sync_config',
-                lastSyncTimestamp: now - 2 * dayMs,
-                gasWebAppUrl: '',
-                syncLogs: [
-                    { time: now - 2 * dayMs, message: 'Sincronización inicial completada (0 conflictos).' }
-                ]
             });
+
+            AppState.transactions.forEach(tx => {
+                if (Number(tx.is_deleted) === 0 && demoTxDescriptions.has(tx.description)) {
+                    tx.is_deleted = 1;
+                    tx.updated_at = now;
+                    tx.sync_status = 'pending';
+                    modified = true;
+                }
+            });
+
+            AppState.debts.forEach(d => {
+                if (Number(d.is_deleted) === 0 && demoDebtTitles.has(d.title)) {
+                    d.is_deleted = 1;
+                    d.updated_at = now;
+                    d.sync_status = 'pending';
+                    modified = true;
+                }
+            });
+
+            if (modified) {
+                try {
+                    await db.accounts.bulkPut(AppState.accounts);
+                    await db.transactions.bulkPut(AppState.transactions);
+                    await db.debts.bulkPut(AppState.debts);
+                    localStorage.setItem(DEMO_CLEANUP_FLAG_KEY, 'true');
+                } catch (_) {}
+            }
+        }
+
+        async function persistGasUrlImmediately(rawUrl) {
+            const cleanUrl = String(rawUrl || '').trim();
+            AppState.gasWebAppUrl = cleanUrl;
+            try {
+                localStorage.setItem(GAS_URL_STORAGE_KEY, cleanUrl);
+            } catch (_) {}
+            try {
+                await db.app_meta.put({
+                    key: 'sync_config',
+                    lastSyncTimestamp: AppState.lastSyncTimestamp || 0,
+                    gasWebAppUrl: cleanUrl,
+                    syncLogs: AppState.syncLogs || []
+                });
+            } catch (_) {}
         }
 
         async function loadStateFromIndexedDB() {
@@ -1935,10 +1867,19 @@ self.addEventListener('fetch', event => {
             AppState.debts = await db.debts.toArray();
 
             const meta = await db.app_meta.get('sync_config');
+            const backupUrl = localStorage.getItem(GAS_URL_STORAGE_KEY) || '';
+
             if (meta) {
                 AppState.lastSyncTimestamp = meta.lastSyncTimestamp || 0;
-                AppState.gasWebAppUrl = meta.gasWebAppUrl || '';
+                AppState.gasWebAppUrl = meta.gasWebAppUrl || backupUrl;
                 AppState.syncLogs = meta.syncLogs || [];
+            } else {
+                AppState.gasWebAppUrl = backupUrl;
+            }
+
+            // Mantener sincronizado el respaldo en localStorage si existía en IndexedDB
+            if (AppState.gasWebAppUrl) {
+                try { localStorage.setItem(GAS_URL_STORAGE_KEY, AppState.gasWebAppUrl); } catch (_) {}
             }
         }
 
@@ -2048,7 +1989,7 @@ self.addEventListener('fetch', event => {
                 amber: { badge: 'bg-orange-50 text-brand-poppy', border: 'border-l-4 border-l-brand-poppy' }
             };
 
-            accContainer.innerHTML = activeAccounts.map(acc => {
+            accContainer.innerHTML = activeAccounts.length ? activeAccounts.map(acc => {
                 const nativeBalance = calculateAccountNativeBalance(acc);
                 const usdEquivalent = CurrencyEngine.toUSDPivot(nativeBalance, acc.currency);
                 const style = accentStyles[acc.color] || accentStyles.purple;
@@ -2091,7 +2032,7 @@ self.addEventListener('fetch', event => {
                         </div>
                     </div>
                 `;
-            }).join('');
+            }).join('') : `<div class="bg-white rounded-3xl p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200">No tienes cuentas creadas. Pulsa <strong>"Nueva Cuenta"</strong> arriba o sincroniza con Google Sheets.</div>`;
 
             // 4. Barra de Distribución Multidivisa
             const distBar = document.getElementById('currency-distribution-bar');
@@ -2923,7 +2864,7 @@ self.addEventListener('fetch', event => {
             const btn = document.getElementById('btn-execute-sync');
             const icon = document.getElementById('sync-icon');
             const urlInput = document.getElementById('gas-endpoint-input').value.trim();
-            AppState.gasWebAppUrl = urlInput;
+            await persistGasUrlImmediately(urlInput);
 
             btn.disabled = true;
             icon.classList.add('animate-spin');
@@ -3054,24 +2995,25 @@ self.addEventListener('fetch', event => {
             showToast(`Purga de 2 años completada (${removed} registros antiguos eliminados).`);
         }
 
-        async function resetDemoDatabase() {
+        async function resetLocalDatabaseClean() {
+            const preservedUrl = AppState.gasWebAppUrl || localStorage.getItem(GAS_URL_STORAGE_KEY) || '';
             try {
-                await db.delete();
-                await db.open();
-                await seedInitialData();
-                await loadStateFromIndexedDB();
+                await purgeResidualDemoDataOnce();
+                await db.accounts.clear();
+                await db.transactions.clear();
+                await db.debts.clear();
+                AppState.accounts = [];
+                AppState.transactions = [];
+                AppState.debts = [];
+                AppState.lastSyncTimestamp = 0;
+                await persistGasUrlImmediately(preservedUrl);
             } catch (_) {
-                await seedInMemoryFallback();
+                AppState.accounts = [];
+                AppState.transactions = [];
+                AppState.debts = [];
             }
             renderAllViews();
-            showToast('Datos semilla de demostración restaurados.');
-        }
-
-        async function seedInMemoryFallback() {
-            AppState.accounts = [];
-            AppState.transactions = [];
-            AppState.debts = [];
-            await seedInitialData().catch(() => {});
+            showToast('Base local limpia en cero (URL de Google Sheets conservada).');
         }
 
         /**
@@ -3244,4 +3186,3 @@ self.addEventListener('fetch', event => {
     </script>
 </body>
 </html>
-```
